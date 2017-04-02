@@ -531,7 +531,7 @@
     }
     
 
-    function Test-InstalledSqlSupportsTls12 {
+    function Test-SqlSupportsTls12 {
     <#
         .Synopsis
         Tests whether disabling TLS and SSL protocols will disrupt SQL Server connections
@@ -544,7 +544,7 @@
         This function returns true if SQL is not installed, or if all installed components support TLS1.2. Returns false if any components do not support TLS1.2.
 
         .Example
-        PS C:\> Test-InstalledSqlSupportsTls12
+        PS C:\> Test-SqlSupportsTls12
 
         False
 
@@ -704,7 +704,7 @@ Export-ModuleMember @(
     'Get-SslRegValues',
     'New-SslRegValues',
     'Set-SslRegValues',
-    'Test-InstalledSqlSupportsTls12',
+    'Test-SqlSupportsTls12',
     'Test-RdpSupportsTls12',
     'Export-SslRegBackup'
 )
