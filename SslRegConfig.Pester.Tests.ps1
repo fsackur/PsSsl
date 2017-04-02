@@ -53,7 +53,7 @@ Describe 'Reg functions' {
     }
 
     Context 'Setting reg values' {
-
+    
         $MockWmiCreateRegKey = {
             #https://msdn.microsoft.com/en-us/library/aa389385(v=vs.85).aspx
             $HKEY_LOCAL_MACHINE = 2147483650
@@ -71,9 +71,11 @@ Describe 'Reg functions' {
         Mock 'Get-WmiObject' -ModuleName SslRegConfig -ParameterFilter {$List -and $Namespace -eq "ROOT\DEFAULT"} -MockWith {return $MockWmiProvider}
 
         It 'Sets reg values if provided' {
+            $MOCK_TLS_11_REGKEY_EXISTS | Should Be $false
             Set-SslRegValues -Enable 'SSL3.0' -Disable 'TLS1.1'
             Assert-MockCalled 'Set-ItemProperty' -ModuleName SslRegConfig -Times 1 -ParameterFilter $Ssl30Enable
             Assert-MockCalled 'Set-ItemProperty' -ModuleName SslRegConfig -Times 1 -ParameterFilter $Tls11Disable
+            $MOCK_TLS_11_REGKEY_EXISTS | Should Be $true
         }
         
         It 'Gives precedence to Enable values over Disable' {
