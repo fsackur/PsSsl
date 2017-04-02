@@ -263,7 +263,12 @@
         .Description
         This exists as a separate function because it makes the code testable
 
-        .Links
+        .Example
+        PS C:\> Create-RegKey -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server'
+
+        Creates a new empty registry key at the specified location, if none exists already
+
+        .Link
         https://msdn.microsoft.com/en-us/library/aa389385(v=vs.85).aspx
     #>
         [CmdletBinding()]
@@ -509,23 +514,38 @@
     }
     
 
+    function Test-InstalledSqlSupportsTls12 {
+    <#
+        .Synopsis
+        Tests whether disabling TLS and SSL protocols will disrupt SQL Server connections
 
+        .Description
+        SQL Server 2016 is the first verison of SQL Server that supports TLS 1.2 on all builds. All previous versions require one or more updates to support TLS1.2.
 
+        Disabling SSL and TLS protocols up to TLS 1.0 or TLS 1.1 on a server where the SQL components do not support TLS 1.2 is likely to break SQL.
 
+        This function returns true if SQL is not installed, or if all installed components support TLS1.2. Returns false if any components do not support TLS1.2.
 
+        .Example
+        PS C:\> Test-InstalledSqlSupportsTls12
 
+        False
 
-    #Not complete yet...
+        This tests for any installed SQL Server components and, if found, returns whether it is safe to disable SSL and TLS protocols up to TLS 1.0. If no installed SQL components are found, it returns true.
+            
+        .Link
+        https://support.microsoft.com/en-gb/help/3135244/tls-1.2-support-for-microsoft-sql-server
+    #>
+        [OutputType([bool])]
+        param()
 
-    function Get-InstalledSqlSupportsTls12 {
-        <#
-            Returns true if SQL is not installed, or if all installed instances support TLS1.2. Returns false if any installed instances do not support TLS1.2.
-        #>
-    
-        $SqlVersions = Get-WmiObject -Query "SELECT PathName FROM Win32_Service WHERE Name LIKE '%sql%' AND PathName LIKE '%sqlservr.exe%'" | foreach {
-            $ExePath = $_.PathName.Split('"',3)[1]
-            [version](Get-Command $ExePath).FileVersionInfo.ProductVersion
-        }
+        $AffectedSqlComponents = @(
+            'Database Engine',
+            'Client Tools'
+        )
+        $AllSqlProducts = Get-WmiObject Win32_Product -Filter "Vendor LIKE 'Microsoft Corporation' AND Name LIKE 'SQL Server %'"
+        $AffectedSqlProducts = $AllSqlProducts | where {$_.Name -match ($AffectedSqlComponents -join '|')}
+        $SqlVersions = $AffectedSqlProducts | select -ExpandProperty Version
 
         $AllSqlVersionsSupportTls = $true
 
@@ -563,6 +583,41 @@
     }
 
 
+    function Test-RdpSupportsTls12 {
+    <#
+        .Synopsis
+        Tests whether disabling TLS and SSL protocols will disrupt RDP connections
+
+        .Description
+        Server 2008 does not support TLS 1.1 or TLS 1.2 on RDP connections that use TLS as a transport security layer. A hotfix is available (KB3080079) that enables these protocols
+
+        Disabling SSL and TLS protocols up to TLS 1.0 or TLS 1.1 on a Server 2008 or 2008 R2 installation where the hotfix is not present may prevent RDP.
+
+        This does not affect RDP connections that use the RDP security layer; however, TLS is frequently mandated by policy. It is best practice to install the relevant hotfix before altering the TLS configuration.
+
+        This function returns true the server version is Server 2012 or greater, or if the server version is 2008 or 2008 R2 and the hotfix is installed.
+
+        .Example
+        PS C:\> Test-RdpSupportsTls12
+
+        False
+
+        This tests for RDP incompatibility with TLS 1.1 and TLS 1.2, and returns whether it is safe to disable SSL and TLS protocols up to TLS 1.0.
+            
+        .Link
+        https://support.microsoft.com/en-us/help/3080079/update-to-add-rds-support-for-tls-1.1-and-tls-1.2-in-windows-7-or-windows-server-2008-r2
+    #>
+        [OutputType([bool])]
+        param()
+
+        if ([version](Get-WmiObject Win32_OperatingSystem).Version -lt [version]"6.2") {
+            return $true
+        }
+        $RdpHotfix = Get-WmiObject Win32_QuickFixEngineering -Filter "HotFixID LIKE 'KB3080079'"
+        if ($RdpHotfix) {return $true}
+
+        return $false
+    }
 
 
 
@@ -589,3 +644,14 @@
     }
 
     #Don't disable old TLS or SSL if no newer are enabled
+
+Export-ModuleMember @(
+    'Create-RegKey',
+    'Get-SslRegLookupTable',
+    'Get-SslRegReport',
+    'Get-SslRegValues',
+    'New-SslRegValues',
+    'Set-SslRegValues',
+    'Test-InstalledSqlSupportsTls12',
+    'Test-RdpSupportsTls12'
+)
