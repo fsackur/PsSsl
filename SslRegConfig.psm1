@@ -317,7 +317,7 @@
         Returns a collection of protocols and their configured status
 
         .Description
-        For each protocol and cipher, 
+        For each protocol and cipher, return Enabled / Disabled / Not Configured / Invalid Value ($Value)
 
     #>
         [CmdletBinding(DefaultParameterSetName='Default')]
