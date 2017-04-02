@@ -103,7 +103,10 @@ Describe 'Reg backup' {
             Export-SslRegBackup -Path $TempFile
             Test-Path $TempFile | Should Be $true
             $Content = Get-Content $TempFile
-
+            [regex]::Matches(
+                $Content, 
+                [regex]::Escape('[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL')
+            ).Count -gt 6 | Should be $true
 
         }
         
