@@ -249,10 +249,55 @@
             try {
                 Set-ItemProperty @Splat
             } catch [System.Management.Automation.ItemNotFoundException] {
-                [void](reg add $Splat.LiteralPath.Replace('HKLM:', 'HKLM') /f)   #workaround: New-Item doesn't support -LiteralPath
+                Create-RegKey $Splat.LiteralPath
                 Set-ItemProperty @Splat
             }
         }
+    }
+
+    function Create-RegKey {
+    <#
+        .Synopsis
+        Create a registry key
+
+        .Description
+        This exists as a separate function because it makes the code testable
+
+        .Links
+        https://msdn.microsoft.com/en-us/library/aa389385(v=vs.85).aspx
+    #>
+        [CmdletBinding()]
+        [OutputType([void])]
+        param(
+            [Parameter(Mandatory=$true, Position=0)]
+            [string]$LiteralPath
+        )
+
+        [ValidateSet('HKCR','HKLM', 'HKCC', 'HKU', 'HKCU')]
+        [string]$RootKey = $LiteralPath -replace ':.*'
+
+        [string]$SubKey = $LiteralPath -replace '(HKCR|HKLM|HKCC|HKU|HKCU):\\'
+
+        $RootKeyFlags = switch ($RootKey) {
+            'HKCR' {2147483648}
+            'HKCU' {2147483649}
+            'HKLM' {2147483650}
+            'HKU'  {2147483651}
+            'HKCC' {2147483653}
+        }
+
+        $RegProvider = Get-WmiObject -List -Namespace 'ROOT\DEFAULT' | where {$_.Name -eq 'StdRegProv'}
+        $Result = $RegProvider.CreateKey(
+            $RootKeyFlags,
+            $SubKey
+        )
+
+        switch ($Result.ReturnValue) {
+            0 {return}
+            5 {throw New-Object System.Security.SecurityException ('Requested registry access is not allowed.')}
+            Default {throw "CreateKey failed with return value $_"}
+        }
+
     }
 
     function New-SslRegValues {
