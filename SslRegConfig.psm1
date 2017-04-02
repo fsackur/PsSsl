@@ -64,18 +64,18 @@
         #Data table. Update this to extend support to other protocols and ciphers.
         $RegParentPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL'
 
-        $Headers = (     'RegKey',                          'RegProperty', 'Type',  'Value_Disabled', 'Value_Enabled')
-        $Table = @( #     -------                            ------------   -----    ---------------   -------------
-            ('SSL2.0',   'Protocols\SSL 2.0\Server',           'Enabled',  'DWord', 0,                1              ),
-            ('SSL3.0',   'Protocols\SSL 3.0\Server',           'Enabled',  'DWord', 0,                1              ),
-            ('TLS1.0',   'Protocols\TLS 1.0\Server',           'Enabled',  'DWord', 0,                1              ),
-            ('TLS1.1',   'Protocols\TLS 1.1\Server',           'Enabled',  'DWord', 0,                1              ),
-            ('RC4 40',   'Ciphers\RC4 40/128',                 'Enabled',  'DWord', 0,                4294967295     ),     #0xffffffff
-            ('RC4 56',   'Ciphers\RC4 56/128',                 'Enabled',  'DWord', 0,                4294967295     ),
-            ('RC4 64',   'Ciphers\RC4 64/128',                 'Enabled',  'DWord', 0,                4294967295     ),
-            ('RC4 128',  'Ciphers\RC4 128/128',                'Enabled',  'DWord', 0,                4294967295     ),
-       ('Diffie-Hellman','KeyExchangeAlgorithms\Diffie-Hellman','Enabled', 'DWord', 0,                1              ),
-            ('ECDH',     'KeyExchangeAlgorithms\ECDH',         'Enabled',  'DWord', 0,                1              )
+        $Headers = (     'Category',     'RegKey',               'RegProperty', 'RegType', 'Value_Disabled', 'Value_Enabled')
+        $Table = @( #     --------        ------                  -----------    -------    --------------    -------------
+            ('SSL2.0',   'Protocols',    'SSL 2.0\Server',       'Enabled',     'DWord',    0,                1              ),
+            ('SSL3.0',   'Protocols',    'SSL 3.0\Server',       'Enabled',     'DWord',    0,                1              ),
+            ('TLS1.0',   'Protocols',    'TLS 1.0\Server',       'Enabled',     'DWord',    0,                1              ),
+            ('TLS1.1',   'Protocols',    'TLS 1.1\Server',       'Enabled',     'DWord',    0,                1              ),
+            ('RC4 40',   'Ciphers',      'RC4 40/128',           'Enabled',     'DWord',    0,                4294967295     ),     #0xffffffff
+            ('RC4 56',   'Ciphers',      'RC4 56/128',           'Enabled',     'DWord',    0,                4294967295     ),
+            ('RC4 64',   'Ciphers',      'RC4 64/128',           'Enabled',     'DWord',    0,                4294967295     ),
+            ('RC4 128',  'Ciphers',      'RC4 128/128',          'Enabled',     'DWord',    0,                4294967295     ),
+            ('Diffie-Hellman','KeyExchangeAlgorithms','Diffie-Hellman','Enabled','DWord',   0,                1              ),
+            ('ECDH',     'KeyExchangeAlgorithms','ECDH',         'Enabled',     'DWord',    0,                1              )
         )
 
 
@@ -86,18 +86,26 @@
         foreach ($Row in $Table) {
             $RegObj = New-Object psobject
 
+            #Add all columns as object properties
             for ($colnum=0; $colnum -lt $Headers.Count; $colnum++) {
                 
                 $ColHeader = $Headers[$colnum]
                 $Value = $Row[$colnum + 1]
 
-                #replace relative path of reg key with full path
-                if ($ColHeader -eq 'RegKey') {$Value = "$RegParentPath\$Value"}
-
                 $RegObj | Add-Member Noteproperty `
                     -Name $ColHeader `
                     -Value $Value
             }
+
+            #Then add a final property by constructing full path of reg key
+            $RegObj | Add-Member Noteproperty `
+                -Name 'RegLiteralPath' `
+                -Value ([string]::Format(
+                    "{0}\{1}\{2}",
+                    $RegParentPath,
+                    $RegObj.Category,
+                    $RegObj.RegKey
+                ))
     
             $RegLookup.Add($Row[0], $RegObj)
         }
@@ -148,12 +156,16 @@
         #Use the properties from supplied hashtable to look up in reg and populate new hashtable
         foreach ($Key in $RegLookup.Keys) {
             $Splat = @{
-                LiteralPath = $RegLookup[$Key].Regkey;
+                LiteralPath = $RegLookup[$Key].RegLiteralPath;
                 Name = $RegLookup[$Key].RegProperty;
-                ErrorAction = 'SilentlyContinue'
+                ErrorAction = 'Stop'
             }
-            $Value = $null
-            $Value = Get-ItemProperty @Splat | select -ExpandProperty $Splat.Name
+            
+            try {
+                $Value = Get-ItemProperty @Splat | select -ExpandProperty $Splat.Name
+            } catch [System.Management.Automation.ItemNotFoundException] {
+                $Value = $null
+            }
             if ($Value -eq -1) {$Value = 4294967295}   #workaround for int/uint32 casting
             $RegValues.Add($Key, $Value)
         }
@@ -227,14 +239,19 @@
         #Use the properties from supplied hashtable to look up in reg and populate new hashtable
         foreach ($Key in $RegValues.Keys) {
             $Splat = @{
-                LiteralPath = $RegLookup[$Key].Regkey;
+                LiteralPath = $RegLookup[$Key].RegLiteralPath;
                 Name = $RegLookup[$Key].RegProperty;
                 Value = $RegValues[$Key];
-                ErrorAction = 'SilentlyContinue';
+                ErrorAction = 'Stop';
                 Force = $true;
             }
             if ($PSBoundParameters.ContainsKey('WhatIf')) {$Splat.WhatIf = $PSBoundParameters.WhatIf}
-            Set-ItemProperty @Splat
+            try {
+                Set-ItemProperty @Splat
+            } catch [System.Management.Automation.ItemNotFoundException] {
+                [void](reg add $Splat.LiteralPath.Replace('HKLM:', 'HKLM') /f)   #workaround: New-Item doesn't support -LiteralPath
+                Set-ItemProperty @Splat
+            }
         }
     }
 
@@ -319,6 +336,68 @@
         .Description
         For each protocol and cipher, return Enabled / Disabled / Not Configured / Invalid Value ($Value)
 
+        .Parameter RegValues
+        A hashtable of registry values. If not specified, the function reads the current values from the registry
+
+        .Parameter RegValuesBefore
+        A hashtable of registry values to use as the 'before' comparison side. If specified, only elements that differ will be output.
+
+        .Parameter RegValuesAfter
+        A hashtable of registry values to use as the 'after' comparison side. If RegValuesBefore is specified but RegValuesAfter is not, current registry values will be used. only elements that differ will be output.
+
+        .Example
+        PS C:\> Get-SslRegReport
+
+        Property       Value         
+        --------       -----         
+        SSL2.0         Disabled
+        SSL3.0         Disabled
+        TLS1.0         Not configured
+        TLS1.1         Not configured
+        RC4 40         Not configured
+        RC4 56         Not configured
+        RC4 64         Not configured
+        RC4 128        Not configured
+        Diffie-Hellman Not configured
+        ECDH           Enabled
+
+        Returns current registry configurations. In this case, ECDH has been explicitly enabled; SSL 2.0 and SSL 3.0 have been explicitly disabled; all other elements have no explicit setting in the registry and will be enabled or disabled depending on OS default for that element
+
+        .Example
+        PS C:\> $ValuesToSet = New-SslRegValues -Disable 'SSL3.0'
+
+        PS C:\> Get-SslRegReport $ValuesToSet
+
+        Property       Value         
+        --------       -----         
+        SSL2.0         Not configured
+        SSL3.0         Disabled      
+        TLS1.0         Not configured
+        TLS1.1         Not configured
+        RC4 40         Not configured
+        RC4 56         Not configured
+        RC4 64         Not configured
+        RC4 128        Not configured
+        Diffie-Hellman Not configured
+        ECDH           Not configured
+
+        Prepares registry changes to commit and stores in variable $ValuesToSet. Reports on the changes that will be made when you pass $ValuesToSet to Set-SslRegValues
+
+        .Example
+        PS C:\> $ConfigBefore = Get-SslRegValues
+
+        PS C:\> Set-SslRegValues -Disable 'SSL3.0'
+
+        PS C:\> $ConfigAfter = Get-SslRegValues
+
+        PS C:\> Get-SslRegReport -RegValuesBefore $ConfigBefore -RegValuesAfter $ConfigAfter
+
+        Property       Value         
+        --------       -----         
+        SSL3.0         Disabled
+
+        Reports on the effect of running Set-SslRegValues -Disable 'SSL3.0'. If SSL 3.0 was already disabled, there will be no output.
+
     #>
         [CmdletBinding(DefaultParameterSetName='Default')]
         [OutputType([System.Collections.IDictionary])]
@@ -336,6 +415,7 @@
             [System.Collections.IDictionary]$RegLookup = (Get-SslRegLookupTable)
         )
 
+        #Single set of values, no comparison to be performed
         if ($PSCmdlet.ParameterSetName -eq 'Default') {
             foreach ($Key in $RegLookup.Keys) {
 
@@ -351,15 +431,16 @@
                     Add-Member -MemberType NoteProperty -Name 'Value' -Value $Value -PassThru
             }
 
+        #Perform comparison between two sets of values and output the differences only
         } else {
-
+            
             $ValuesBefore = Get-SslRegReport -RegValues $RegValuesBefore -RegLookup $RegLookup
             $ValuesAfter = Get-SslRegReport -RegValues $RegValuesAfter -RegLookup $RegLookup
 
             foreach ($Key in $RegLookup.Keys) {
                 $Before = $ValuesBefore[$Key]
                 $After = $ValuesAfter[$Key]
-                if ($Before -like $After) {continue}
+                if ($Before -like $After) {continue}   #Keep only the differences
 
                 New-Object psobject |
                     Add-Member -MemberType NoteProperty -Name 'Property' -Value $Key -PassThru | 
