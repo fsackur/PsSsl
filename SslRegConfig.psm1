@@ -60,11 +60,10 @@
 
         if (Get-Variable RegLookup -Scope Script -ErrorAction SilentlyContinue) {return $Script:RegLookup}
 
-        $RegParentPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL'
-        $RegLookup = New-Object System.Collections.Specialized.OrderedDictionary
-
-
+        
         #Data table. Update this to extend support to other protocols and ciphers.
+        $RegParentPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL'
+
         $Headers = (     'RegKey',                          'RegProperty', 'Type',  'Value_Disabled', 'Value_Enabled')
         $Table = @( #     -------                            ------------   -----    ---------------   -------------
             ('SSL2.0',   'Protocols\SSL 2.0\Server',           'Enabled',  'DWord', 0,                1              ),
@@ -80,6 +79,10 @@
         )
 
 
+        #Table is most useful for datafile, but dictionary is better to work with
+        $RegLookup = New-Object System.Collections.Specialized.OrderedDictionary
+
+        #Convert table to dictionary
         foreach ($Row in $Table) {
             $RegObj = New-Object psobject
 
@@ -88,6 +91,7 @@
                 $ColHeader = $Headers[$colnum]
                 $Value = $Row[$colnum + 1]
 
+                #replace relative path of reg key with full path
                 if ($ColHeader -eq 'RegKey') {$Value = "$RegParentPath\$Value"}
 
                 $RegObj | Add-Member Noteproperty `
