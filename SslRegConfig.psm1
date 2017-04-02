@@ -218,19 +218,32 @@
         [OutputType([void])]
         param(
             [Parameter(ParameterSetName='ProtocolList')]
-            [ValidateScript({$Script:RegLookup.Contains($_)})]
+            [ValidateSet(
+                'SSL2.0', 'SSL3.0', 'TLS1.0', 'TLS1.1', 'RC4 40', 'RC4 56', 'RC4 64', 'RC4 128', 'Diffie-Hellman', 'ECDH'
+            )]
             [string[]]$Enable,
 
             [Parameter(ParameterSetName='ProtocolList')]
-            [ValidateScript({$Script:RegLookup.Contains($_)})]
+            [ValidateSet(
+                'SSL2.0', 'SSL3.0', 'TLS1.0', 'TLS1.1', 'RC4 40', 'RC4 56', 'RC4 64', 'RC4 128', 'Diffie-Hellman', 'ECDH'
+            )]
             [string[]]$Disable,
 
             [Parameter(Mandatory=$true, Position=0, ParameterSetName='RegValues')]
             [System.Collections.IDictionary]$RegValues,
 
             [Parameter()]
-            [System.Collections.IDictionary]$RegLookup = (Get-SslRegLookupTable)
+            [System.Collections.IDictionary]$RegLookup = (Get-SslRegLookupTable),
+
+            [Parameter()]
+            [string]$BackupFile
         )
+
+        
+        if ($PSBoundParameters.ContainsKey('BackupFile')) {
+            Export-SslRegBackup -Path $BackupFile
+            $PSBoundParameters.Remove('BackupFile')
+        }
 
         if ($PSCmdlet.ParameterSetName -eq 'ProtocolList') {
             $RegValues = New-SslRegValues @PSBoundParameters
@@ -249,13 +262,13 @@
             try {
                 Set-ItemProperty @Splat
             } catch [System.Management.Automation.ItemNotFoundException] {
-                Create-RegKey $Splat.LiteralPath
+                New-RegKey $Splat.LiteralPath
                 Set-ItemProperty @Splat
             }
         }
     }
 
-    function Create-RegKey {
+    function New-RegKey {
     <#
         .Synopsis
         Create a registry key
@@ -264,7 +277,7 @@
         This exists as a separate function because it makes the code testable
 
         .Example
-        PS C:\> Create-RegKey -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server'
+        PS C:\> New-RegKey -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server'
 
         Creates a new empty registry key at the specified location, if none exists already
 
@@ -350,11 +363,15 @@
         [OutputType([System.Collections.IDictionary])]
         param(
             [Parameter()]
-            [ValidateScript({$Script:RegLookup.Contains($_)})]
+            [ValidateSet(
+                'SSL2.0', 'SSL3.0', 'TLS1.0', 'TLS1.1', 'RC4 40', 'RC4 56', 'RC4 64', 'RC4 128', 'Diffie-Hellman', 'ECDH'
+            )]
             [string[]]$Enable,
 
             [Parameter()]
-            [ValidateScript({$Script:RegLookup.Contains($_)})]
+            [ValidateSet(
+                'SSL2.0', 'SSL3.0', 'TLS1.0', 'TLS1.1', 'RC4 40', 'RC4 56', 'RC4 64', 'RC4 128', 'Diffie-Hellman', 'ECDH'
+            )]
             [string[]]$Disable,
 
             [Parameter()]
@@ -620,6 +637,41 @@
     }
 
 
+    function Export-SslRegBackup {
+    <#
+        .Synopsis
+        Backs up the schannel registry key
+
+        .Description
+        Backs up the schannel registry key and all subkeys to a .reg file that can be re-imported with REG IMPORT
+
+        Will overwrite any existing file
+
+        .Parameter Path
+        The path to the .reg file to be created
+
+        .Example
+        PS C:\> Export-SslRegBackup -Path C:\TEMP\schannel.reg
+
+        Backs up the schannel registry key and subkeys to C:\TEMP\schannel.reg. The backup can be restored with the command REG IMPORT C:\TEMP\schannel.reg
+    #>
+        [CmdletBinding()]
+        [OutputType([void])]
+        param(
+            [ValidateScript({Test-Path $_ -IsValid})]
+            [string]$Path
+        )
+
+        if (-not (Test-Path (Split-Path $Path))) {
+            [void](New-Item (Split-Path $Path) -ItemType Directory -Force -ErrorAction Stop)
+        }
+
+        $RegParentPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL'
+        $Key = $RegParentPath -replace 'HKLM:\\', 'HKLM\'
+        
+        Write-Verbose "Exporting schannel reg key: $(reg export $Key $Path /y)"
+
+    }
 
     #RDP hotfix allows TLS 1.2
     if (
@@ -646,12 +698,13 @@
     #Don't disable old TLS or SSL if no newer are enabled
 
 Export-ModuleMember @(
-    'Create-RegKey',
+    #'New-RegKey',
     'Get-SslRegLookupTable',
     'Get-SslRegReport',
     'Get-SslRegValues',
     'New-SslRegValues',
     'Set-SslRegValues',
     'Test-InstalledSqlSupportsTls12',
-    'Test-RdpSupportsTls12'
+    'Test-RdpSupportsTls12',
+    'Export-SslRegBackup'
 )

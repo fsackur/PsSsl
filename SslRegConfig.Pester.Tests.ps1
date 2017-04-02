@@ -93,6 +93,24 @@ Describe 'Reg functions' {
     
 }
 
+Describe 'Reg backup' {
+    Context 'Export' {
+        
+        $TempFile = [System.IO.Path]::GetTempFileName() -replace '.tmp$', '.reg'
+        if (Test-Path $TempFile) {Remove-Item $TempFile -Force}
+        
+        It 'Exports .reg file' {
+            Export-SslRegBackup -Path $TempFile
+            Test-Path $TempFile | Should Be $true
+            $Content = Get-Content $TempFile
+
+
+        }
+        
+        if (Test-Path $TempFile) {Remove-Item $TempFile -Force}
+    }
+}
+
 Describe 'Function help' {
     Context 'Correctly-formatted help' {
         It 'Provides examples for every exported function' {
