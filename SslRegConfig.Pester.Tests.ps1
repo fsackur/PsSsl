@@ -91,7 +91,47 @@ Describe 'Reg functions' {
         }
     }
     
+}
 
+Describe 'Function help' {
+    Context 'Correctly-formatted help' {
+        It 'Provides examples for every exported function' {
+            foreach ($Command in (Get-Module SslRegConfig | select -ExpandProperty ExportedCommands).Keys) {
+                $Command | Should BeOfType string
+                (Get-Help $Command -Examples | Out-String) | Should Match '-------------------------- EXAMPLE 1 --------------------------'
 
+            }
+        }
+    }
+}
 
+Describe 'Parameter validation' {
+    Context 'Enable and Disable parameters' {
+
+        Mock 'Set-ItemProperty' -ModuleName SslRegConfig {}
+
+        It 'Rejects garbage' {
+            #{New-SslRegValues -Enable 'asdgasgasgasfasf'}  | Should Throw "Cannot validate argument on parameter"
+            #{New-SslRegValues -Disable 'asdgasgasgasfasf'} | Should Throw "Cannot validate argument on parameter"
+            {Set-SslRegValues -Enable 'asdgasgasgasfasf'}  | Should Throw "Cannot validate argument on parameter"
+            {Set-SslRegValues -Disable 'asdgasgasgasfasf'} | Should Throw "Cannot validate argument on parameter"
+        }
+
+        It 'Accepts any key from lookup table of supported elements' {
+            $RegLookup = Get-SslRegLookupTable
+            foreach ($Key in $RegLookup.Keys) {
+                #{New-SslRegValues -Enable $Key}  | Should Not Throw
+                #{New-SslRegValues -Disable $Key} | Should Not Throw
+                {Set-SslRegValues -Enable $Key}  | Should Not Throw
+                {Set-SslRegValues -Disable $Key} | Should Not Throw
+            }
+        }
+
+        It 'Explicitly lists allowed values' {
+            $Command = (Get-Command Set-SslRegValues)
+            $EnableAttributes = $Command.Parameters['Enable'].Attributes
+            $ValidateSet = $EnableAttributes | where {$_.GetType() -eq [System.Management.Automation.ValidateSetAttribute]}
+            $ValidateSet | Should Not Be $null
+        }
+    }
 }
