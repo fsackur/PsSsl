@@ -507,4 +507,85 @@
         return Get-SslRegReport -RegValuesBefore $ConfigBefore -RegValuesAfter $ConfigAfter
 
     }
-                
+    
+
+
+
+
+
+
+
+    #Not complete yet...
+
+    function Get-InstalledSqlSupportsTls12 {
+        <#
+            Returns true if SQL is not installed, or if all installed instances support TLS1.2. Returns false if any installed instances do not support TLS1.2.
+        #>
+    
+        $SqlVersions = Get-WmiObject -Query "SELECT PathName FROM Win32_Service WHERE Name LIKE '%sql%' AND PathName LIKE '%sqlservr.exe%'" | foreach {
+            $ExePath = $_.PathName.Split('"',3)[1]
+            [version](Get-Command $ExePath).FileVersionInfo.ProductVersion
+        }
+
+        $AllSqlVersionsSupportTls = $true
+
+        foreach ($Version in $SqlVersions) {
+
+            #sometimes 2008R2 shows up as 10.52
+            if ($Version.Minor -gt 50) {$Version = [version]($Version.ToString() -replace $Version.Minor, '50')}
+
+            #https://support.microsoft.com/en-gb/help/3135244/tls-1.2-support-for-microsoft-sql-server
+            $AllSqlVersionsSupportTls = $AllSqlVersionsSupportTls -and $(
+                switch ($Version.Major) {
+
+                    10
+                        {($Version -ge [version]"10.50.6542.0")}
+
+                    11
+                        {($Version -ge [version]"11.0.6542.0") -or
+                            ($Version -lt [version]"11.0.6020.0" -and $Version -ge [version]"11.0.5352.0")}
+
+                    12
+                        {($Version -ge [version]"12.0.4219.0") -or
+                            ($Version -lt [version]"12.0.4100.0" -and $Version -ge [version]"12.0.2564.0")}
+
+                    {$_ -ge 13}
+                        {$true}
+
+                    default
+                        {$false}
+
+                }
+            )
+        }
+
+        return $AllSqlVersionsSupportTls
+    }
+
+
+
+
+
+    #RDP hotfix allows TLS 1.2
+    if (
+        (($Disable -contains 'SSL3.0') -or ($Disable -contains 'TLS1.0') -or ($Disable -contains 'TLS1.1')) -and
+        ([version](Get-WmiObject Win32_OperatingSystem).Version -lt [version]"6.2") -and
+        ($null -eq $(Get-HotFix KB3080079 -ErrorAction SilentlyContinue))
+    ) {
+        $Output.RegChanges = "Aborting; KB3080079 is not installed, or PS<3. Ref: https://support.microsoft.com/en-us/help/3080079/update-to-add-rds-support-for-tls-1.1-and-tls-1.2-in-windows-7-or-windows-server-2008-r2"
+        return $Output
+    }
+
+
+    #SQL updates enable TLS 1.2
+    if (
+        (-not $SkipSqlChecks) -and
+        (($Disable -contains 'TLS1.0') -or ($Disable -contains 'TLS1.1')) -and
+        ($null -ne (Get-WmiObject -Namespace "ROOT\Microsoft\SqlServer" -Class "__Namespace"  -ErrorAction SilentlyContinue)) -and
+        (-not (Get-InstalledSqlSupportsTls12))
+    ) {
+        $Output.RegChanges = "Aborting; SQL is installed but not all instances support TLS1.2. Ref: https://support.microsoft.com/en-gb/help/3135244/tls-1.2-support-for-microsoft-sql-server"
+        return $Output
+    }
+
+    #Don't disable old TLS or SSL if no newer are enabled
