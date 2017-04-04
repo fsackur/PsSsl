@@ -552,6 +552,12 @@
             
         .Link
         https://support.microsoft.com/en-gb/help/3135244/tls-1.2-support-for-microsoft-sql-server
+
+        .Link
+        https://blogs.sentryone.com/aaronbertrand/tls-1-2-support-read-first/
+
+        .Link
+        https://blogs.msdn.microsoft.com/sqlreleaseservices/tls-1-2-support-for-sql-server-2008-2008-r2-2012-and-2014/
     #>
         [OutputType([bool])]
         param()
