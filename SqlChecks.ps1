@@ -246,7 +246,7 @@ function Get-SqlTls12Report {
         $OsVersion = [version](Get-WmiObject Win32_OperatingSystem).Version
 
         #Script provides poor output; parse to get a version from the newest version installed
-        $DotNetClientVersion = & $PSScriptRoot\Get-NetFrameworkVersion.ps1 | 
+        $DotNetClientVersion = Get-NetFrameworkVersion.ps1 | 
             sort NetFXVersion | 
             select -Last 1 |
             select -ExpandProperty NetFxVersion |
