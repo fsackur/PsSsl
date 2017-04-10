@@ -44,24 +44,25 @@ Describe 'Parameter validation' {
 
         Mock 'Set-ItemProperty' -ModuleName $ModuleName {}
 
-        It 'Rejects garbage' {
-            {Set-SslRegValues -Disable 'asdgasgasgasfasf'} | Should Throw "Cannot validate argument on parameter"
-        }
+        foreach ($Command in 'Enable-Ssl') {
+            Mock $Command -ModuleName $ModuleName {}
 
-        InModuleScope $ModuleName {
-            It 'Accepts any key from lookup table of supported elements' {
+            It "$Command rejects garbage" {
+                {& $Command -Protocol 'asdgasgasgasfasf'} | Should Throw "Cannot validate argument on parameter"
+            }
+
+            It "$Command accepts any key from lookup table of supported elements" {
                 $RegLookup = Get-SslRegLookupTable
                 foreach ($Key in $RegLookup.Keys) {
                     {Enable-Ssl -Protocol $Key} | Should Not Throw
                 }
             }
-        }
 
-        It 'Explicitly lists allowed values' {
-            $Command = (Get-Command Set-SslRegValues)
-            $EnableAttributes = $Command.Parameters['Enable'].Attributes
-            $ValidateSet = $EnableAttributes | where {$_.GetType() -eq [System.Management.Automation.ValidateSetAttribute]}
-            $ValidateSet | Should Not Be $null
-        }
+            It "$Command Explicitly lists allowed values" {
+                $EnableAttributes = (Get-Command $Command).Parameters['Protocol'].Attributes
+                $ValidateSet = $EnableAttributes | where {$_.GetType() -eq [System.Management.Automation.ValidateSetAttribute]}
+                $ValidateSet | Should Not Be $null
+            }
+        } #end foreach
     }
 }
