@@ -111,7 +111,30 @@ function Get-SqlTlsUpdatesRequired {
 
 
 function Get-SqlTls12Report {
+    <#
+        .Synopsis
+        In the context of SQL Server, tests the current machine for safety of disabling TLS 1.0 and lower.
+        
+        .Description
+        Tests the current machine for SQL operability if TLS 1.0 and lower protocols are disabled
 
+        Tests for supportability of SQL components installed
+
+        Tests for supportability if the current machine is a client of a remote SQL server
+
+        .Example
+        PS C:> Get-SqlTls12Report
+
+        ComputerName                   : WS-40974
+        SupportsTls12                  : True
+        SqlNativeClientInstalled       : Microsoft SQL Server 2012 Native Client 
+        SqlNativeClientUpdatesRequired : 
+        SqlNativeClientSupportsTls12   : True
+
+        Reports on operability of SQL Server if TLS 1.0, SSL 3.0 etc are disabled.
+
+        The property 'SupportsTls12' is true if each tested component is OK.
+    #>
     $MssqlPrograms = Get-InstalledPrograms | where {$_.DisplayName -match 'SQL' -and $_.Publisher -match 'Microsoft'}
     $DbEnginePrograms = $MssqlPrograms | where {$_.DisplayName -match 'Database Engine'}
     $AdoNetPrograms = $MssqlPrograms | where {$_.DisplayName -match 'Report|Management Studio'}
