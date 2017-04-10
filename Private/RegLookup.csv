@@ -1,0 +1,12 @@
+Name,            Category,               RegKey,          RegProperty,        RegType,  Value_Disabled,  Value_Enabled
+SSL2.0,          Protocols,              SSL 2.0\Server,  Enabled,            DWord,    0,               1  
+SSL3.0,          Protocols,              SSL 3.0\Server,  Enabled,            DWord,    0,               1
+TLS1.0,          Protocols,              TLS 1.0\Server,  Enabled,            DWord,    0,               1
+TLS1.0 DbD,      Protocols,              TLS 1.0\Server,  DisabledByDefault,  DWord,    0,               1
+TLS1.1,          Protocols,              TLS 1.1\Server,  Enabled,            DWord,    0,               1
+RC4 40,          Ciphers,                RC4 40/128,      Enabled,            DWord,    0,               4294967295
+RC4 56,          Ciphers,                RC4 56/128,      Enabled,            DWord,    0,               4294967295
+RC4 64,          Ciphers,                RC4 64/128,      Enabled,            DWord,    0,               4294967295
+RC4 128,         Ciphers,                RC4 128/128,     Enabled,            DWord,    0,               4294967295
+Diffie-Hellman,  KeyExchangeAlgorithms,  Diffie-Hellman,  Enabled,            DWord,    0,               1
+ECDH,            KeyExchangeAlgorithms,  ECDH,            Enabled,            DWord,    0,               1

@@ -60,6 +60,7 @@ function New-RegKey {
 
 }
 
+
 function Get-SslRegLookupTable {
 <#
     .Synopsis
@@ -126,58 +127,33 @@ function Get-SslRegLookupTable {
     #Data table. Update this to extend support to other protocols and ciphers.
     $RegParentPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL'
 
-    $Headers = (     'Category',     'RegKey',               'RegProperty', 'RegType', 'Value_Disabled', 'Value_Enabled')
-    $Table = @( #     --------        ------                  -----------    -------    --------------    -------------
-        ('SSL2.0',   'Protocols',    'SSL 2.0\Server',       'Enabled',     'DWord',    0,                1              ),
-        ('SSL3.0',   'Protocols',    'SSL 3.0\Server',       'Enabled',     'DWord',    0,                1              ),
-        ('TLS1.0',   'Protocols',    'TLS 1.0\Server',       'Enabled',     'DWord',    0,                1              ),
-#        ('TLS1.0 DbD','Protocols',   'TLS 1.0\Server',       'DisabledByDefault','DWord',0,               1              ),
-        ('TLS1.1',   'Protocols',    'TLS 1.1\Server',       'Enabled',     'DWord',    0,                1              ),
-        ('RC4 40',   'Ciphers',      'RC4 40/128',           'Enabled',     'DWord',    0,                4294967295     ),     #0xffffffff
-        ('RC4 56',   'Ciphers',      'RC4 56/128',           'Enabled',     'DWord',    0,                4294967295     ),
-        ('RC4 64',   'Ciphers',      'RC4 64/128',           'Enabled',     'DWord',    0,                4294967295     ),
-        ('RC4 128',  'Ciphers',      'RC4 128/128',          'Enabled',     'DWord',    0,                4294967295     ),
-        ('Diffie-Hellman','KeyExchangeAlgorithms','Diffie-Hellman','Enabled','DWord',   0,                1              ),
-        ('ECDH',     'KeyExchangeAlgorithms','ECDH',         'Enabled',     'DWord',    0,                1              )
-    )
-
+    $Table = Import-Csv $PSScriptRoot\RegLookup.csv
 
     #Table is most useful for datafile, but dictionary is better to work with
     $RegLookup = New-Object System.Collections.Specialized.OrderedDictionary
 
     #Convert table to dictionary
     foreach ($Row in $Table) {
-        $RegObj = New-Object psobject
-
-        #Add all columns as object properties
-        for ($colnum=0; $colnum -lt $Headers.Count; $colnum++) {
-                
-            $ColHeader = $Headers[$colnum]
-            $Value = $Row[$colnum + 1]
-
-            $RegObj | Add-Member Noteproperty `
-                -Name $ColHeader `
-                -Value $Value
-        }
-
-        #Then add a final property by constructing full path of reg key
-        $RegObj | Add-Member Noteproperty `
-            -Name 'RegLiteralPath' `
-            -Value ([string]::Format(
+        $RegObj = New-Object psobject -Property @{
+            Category = $Row.Category;
+            RegKey = $Row.RegKey;
+            RegLiteralPath = ([string]::Format(
                 "{0}\{1}\{2}",
                 $RegParentPath,
-                $RegObj.Category,
-                $RegObj.RegKey
-            ))
-    
-        $RegLookup.Add($Row[0], $RegObj)
+                $Row.Category,
+                $Row.RegKey
+            ));
+            RegProperty = $Row.RegProperty;
+            RegType = $Row.RegType;
+            Value_Disabled = [uint32]$Row.Value_Disabled;
+            Value_Enabled = [uint32]$Row.Value_Enabled
+        }
+        $RegLookup.Add($Row.Name, $RegObj)
     }
 
     return $RegLookup
 }
-    
-$Script:RegLookup = Get-SslRegLookupTable
-    
+
 
 function Get-SslDynamicParameter {
 <#
@@ -210,7 +186,7 @@ function Get-SslDynamicParameter {
 
     $ParameterAttribute = [System.Management.Automation.ParameterAttribute]$Property
  
-    $ValidateAttribute = (New-Object System.Management.Automation.ValidateSetAttribute($Script:RegLookup.Keys))
+    $ValidateAttribute = (New-Object System.Management.Automation.ValidateSetAttribute((Get-SslRegLookupTable).Keys))
 
     $Attributes = new-object System.Collections.ObjectModel.Collection[System.Attribute]
     $Attributes.Add($ParameterAttribute)
@@ -275,7 +251,7 @@ function New-SslRegValues {
     [OutputType([System.Collections.IDictionary])]
     param(
         [Parameter(DontShow=$true)]
-        [System.Collections.IDictionary]$RegLookup = $Script:RegLookup
+        [System.Collections.IDictionary]$RegLookup = (Get-SslRegLookupTable)
     )
 
     dynamicparam {
@@ -357,8 +333,8 @@ function Get-SslRegValues {
         }
             
         try {
-            $Value = Get-ItemProperty @Splat | select -ExpandProperty $Splat.Name
-        } catch [System.Management.Automation.ItemNotFoundException] {
+            $Value = (Get-ItemProperty @Splat).$($Splat.Name)
+        } catch {
             $Value = $null
         }
         if ($Value -eq -1) {$Value = 4294967295}   #workaround for int/uint32 casting
