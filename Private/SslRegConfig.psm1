@@ -180,13 +180,16 @@ function Get-SslDynamicParameter {
         [string]$ParameterName,
 
         [Parameter(Mandatory=$false, Position=1)]
-        [hashtable]$Property = @{}
+        [hashtable]$Property = @{},
+
+        [Parameter(Mandatory=$false, Position=2)]
+        [string[]]$ValidValues = ((Get-SslRegLookupTable).Keys)
     )
     $ParameterType = [string[]]
 
     $ParameterAttribute = [System.Management.Automation.ParameterAttribute]$Property
  
-    $ValidateAttribute = (New-Object System.Management.Automation.ValidateSetAttribute((Get-SslRegLookupTable).Keys))
+    $ValidateAttribute = (New-Object System.Management.Automation.ValidateSetAttribute($ValidValues))
 
     $Attributes = new-object System.Collections.ObjectModel.Collection[System.Attribute]
     $Attributes.Add($ParameterAttribute)
