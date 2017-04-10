@@ -1,4 +1,4 @@
-﻿Import-Module $PSScriptRoot\SSlRegConfig.psm1 -Force
+﻿Import-Module $PSScriptRoot\..\Private\SSlRegConfig.psm1 -Force
 
 $Global:RegParentPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL'
 $Global:NotFoundException = New-Object System.Management.Automation.ItemNotFoundException ("Cannot find path '$RegParentPath\Protocols\TLS 1.1\Server' because it does not exist.")
