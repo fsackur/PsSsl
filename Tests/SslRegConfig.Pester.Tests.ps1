@@ -118,13 +118,33 @@ Describe 'Reg backup' {
 
 Describe 'Function help' {
     Context 'Correctly-formatted help' {
-        It 'Provides examples for every exported function' {
-            foreach ($Command in (Get-Module $ModuleName | select -ExpandProperty ExportedCommands).Keys) {
-                $Command | Should BeOfType string
-                (Get-Help $Command -Examples | Out-String) | Should Match '-------------------------- EXAMPLE 1 --------------------------'
+    
+        foreach (
+            $Command in (
+                Get-Module $ModuleName | 
+                select -ExpandProperty ExportedCommands
+                ).Keys
+            ) 
+            {
+                $Help = Get-Help $Command
 
-            }
-        }
+                $Help.examples.example | foreach {$_.code}
+
+                It "$Command has one or more help examples" {
+                    $Help.examples.example | Should Not Be $null
+                }
+
+                #Test only the parameters? Mock it and see if it throws
+                Mock $Command -MockWith {}
+
+                It "$Command examples are syntactically correct" {
+                    foreach ($Example in $Help.examples.example) {
+                        [Scriptblock]::Create($Example.code) | Should Not Throw
+                    }
+                }
+
+            } #end foreach
+
     }
 }
 
@@ -134,8 +154,8 @@ Describe 'Parameter validation' {
         Mock 'Set-ItemProperty' -ModuleName $ModuleName {}
 
         It 'Rejects garbage' {
-            #{New-SslRegValues -Enable 'asdgasgasgasfasf'}  | Should Throw "Cannot validate argument on parameter"
-            #{New-SslRegValues -Disable 'asdgasgasgasfasf'} | Should Throw "Cannot validate argument on parameter"
+            {New-SslRegValues -Enable 'asdgasgasgasfasf'}  | Should Throw "Cannot validate argument on parameter"
+            {New-SslRegValues -Disable 'asdgasgasgasfasf'} | Should Throw "Cannot validate argument on parameter"
             {Set-SslRegValues -Enable 'asdgasgasgasfasf'}  | Should Throw "Cannot validate argument on parameter"
             {Set-SslRegValues -Disable 'asdgasgasgasfasf'} | Should Throw "Cannot validate argument on parameter"
         }
@@ -144,8 +164,8 @@ Describe 'Parameter validation' {
             It 'Accepts any key from lookup table of supported elements' {
                 $RegLookup = Get-SslRegLookupTable
                 foreach ($Key in $RegLookup.Keys) {
-                    #{New-SslRegValues -Enable $Key}  | Should Not Throw
-                    #{New-SslRegValues -Disable $Key} | Should Not Throw
+                    {New-SslRegValues -Enable $Key}  | Should Not Throw
+                    {New-SslRegValues -Disable $Key} | Should Not Throw
                     {Set-SslRegValues -Enable $Key}  | Should Not Throw
                     {Set-SslRegValues -Disable $Key} | Should Not Throw
                 }

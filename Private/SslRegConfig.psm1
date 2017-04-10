@@ -180,6 +180,25 @@ $Script:RegLookup = Get-SslRegLookupTable
     
 
 function Get-SslDynamicParameter {
+<#
+    .Synopsis
+
+    .Description
+
+    .Parameter ParameterName
+    The name of the parameter to construct. Users of the function will see this as an available parameter
+
+    .Example
+    PS C:\> Get-SslDynamicParameter -ParameterName 'Enable' -Property @{Mandatory=$true}
+
+    Name          : Enable
+    ParameterType : System.String[]
+    Value         : 
+    IsSet         : False
+    Attributes    : {__AllParameterSets, System.Management.Automation.ValidateSetAttribute}
+
+    Returns a dynamic parameter that can be added as a value to a dynamic parameter dictionary in a function DynamicParam block
+#>
     param(
         [Parameter(Mandatory=$true, Position=0)]
         [string]$ParameterName,
@@ -383,9 +402,7 @@ function Set-SslRegValues {
     Enables the TLS 1.1 protocol and disables the SSL3.0 protocol and the RC4 40/128 and RC4 56/128 ciphers
 
     .Example
-    PS C:\> $ValuesToSet = @{'TLS1.1'=1;'SSL3.0'=0}
-
-    PS C:\> Set-SslRegValues -RegValues $ValuesToSet
+    PS C:\> $ValuesToSet = @{'TLS1.1'=1;'SSL3.0'=0}; Set-SslRegValues -RegValues $ValuesToSet
 
     Enables the TLS 1.1 protocol and disables the SSL3.0 protocol
 
@@ -611,6 +628,9 @@ function Export-SslRegBackup {
 #endregion public functions
 
 
+
+#If you want to use this module as a standalone module, uncomment the export block below
+<#
 Export-ModuleMember @(
     #'Get-SslRegLookupTable',
     'Get-SslRegReport',
@@ -619,3 +639,4 @@ Export-ModuleMember @(
     'Set-SslRegValues',
     'Export-SslRegBackup'
 )
+#>
