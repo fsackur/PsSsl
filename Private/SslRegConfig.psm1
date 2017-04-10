@@ -1,4 +1,66 @@
-﻿function Get-SslRegLookupTable {
+﻿<#
+    .Synopsis
+    A module to directly set registry values for Schannel rpotocols, ciphers and key-exchange algorithms
+
+    .Description
+    This is a mid-level module. It is intended to be consumed by higher-level modules that manage compatibility tests, e.g. RDP and SQL compatibility.
+#>
+
+
+
+#region private functions
+
+function New-RegKey {
+<#
+    .Synopsis
+    Create a registry key
+
+    .Description
+    This exists as a separate function because it makes the code testable
+
+    .Example
+    PS C:\> New-RegKey -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server'
+
+    Creates a new empty registry key at the specified location, if none exists already
+
+    .Link
+    https://msdn.microsoft.com/en-us/library/aa389385(v=vs.85).aspx
+#>
+    [CmdletBinding()]
+    [OutputType([void])]
+    param(
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$LiteralPath
+    )
+
+    [ValidateSet('HKCR','HKLM', 'HKCC', 'HKU', 'HKCU')]
+    [string]$RootKey = $LiteralPath -replace ':.*'
+
+    [string]$SubKey = $LiteralPath -replace '(HKCR|HKLM|HKCC|HKU|HKCU):\\'
+
+    $RootKeyFlags = switch ($RootKey) {
+        'HKCR' {2147483648}
+        'HKCU' {2147483649}
+        'HKLM' {2147483650}
+        'HKU'  {2147483651}
+        'HKCC' {2147483653}
+    }
+
+    $RegProvider = Get-WmiObject -List -Namespace 'ROOT\DEFAULT' | where {$_.Name -eq 'StdRegProv'}
+    $Result = $RegProvider.CreateKey(
+        $RootKeyFlags,
+        $SubKey
+    )
+
+    switch ($Result.ReturnValue) {
+        0 {return}
+        5 {throw New-Object System.Security.SecurityException ('Requested registry access is not allowed.')}
+        Default {throw "CreateKey failed with return value $_"}
+    }
+
+}
+
+function Get-SslRegLookupTable {
 <#
     .Synopsis
     Returns a hashtable of protocols and ciphers, and the registry edits needed to configure them.
@@ -117,6 +179,119 @@
 $Script:RegLookup = Get-SslRegLookupTable
     
 
+function Get-SslDynamicParameter {
+    param(
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$ParameterName,
+
+        [Parameter(Mandatory=$false, Position=1)]
+        [hashtable]$Property = @{}
+    )
+    $ParameterType = [string[]]
+
+    $ParameterAttribute = [System.Management.Automation.ParameterAttribute]$Property
+ 
+    $ValidateAttribute = (New-Object System.Management.Automation.ValidateSetAttribute($Script:RegLookup.Keys))
+
+    $Attributes = new-object System.Collections.ObjectModel.Collection[System.Attribute]
+    $Attributes.Add($ParameterAttribute)
+    $Attributes.Add($ValidateAttribute)
+ 
+    $Parameter = New-Object System.Management.Automation.RuntimeDefinedParameter(
+        $ParameterName, 
+        $ParameterType, 
+        $Attributes
+    )
+
+    return $Parameter
+}
+
+#endregion private functions
+
+
+#region public functions
+
+function New-SslRegValues {
+<#
+    .Synopsis
+    Creates a dictionary object of registry values relating to SSL configuration
+
+    .Description
+    Creates a new dictionary object with the correct registry values for any of the ciphers and protocols supported by this module.
+
+    Enable arguments take precedence over disable arguments. If a protocol or cipher is specificed to both the Enable parameter and the Disable parameter, it will be enabled.
+
+    .Parameter Enable
+    A list of ciphers or protocols to enable
+        
+    .Parameter Disable
+    A list of ciphers or protocols to disable
+
+    .Example
+    PS C:\> New-SslRegValues -Enable 'TLS1.1'
+
+    Name                           Value
+    ----                           -----
+    TLS1.1                         1
+
+    .Example
+    PS C:\> New-SslRegValues -Disable 'SSL3.0'
+
+    Name                           Value
+    ----                           -----
+    SSL3.0                         0
+
+    .Example
+    PS C:\> New-SslRegValues -Enable 'TLS1.1' -Disable 'SSL3.0', 'RC4 40', 'RC4 56'
+
+    Name                           Value
+    ----                           -----
+    SSL3.0                         0
+    TLS1.1                         1
+    RC4 40                         0
+    RC4 56                         0
+
+#>
+    [CmdletBinding()]
+    [OutputType([System.Collections.IDictionary])]
+    param(
+        [Parameter(DontShow=$true)]
+        [System.Collections.IDictionary]$RegLookup = $Script:RegLookup
+    )
+
+    dynamicparam {
+        $DynamicParameters = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+        $DynamicParameters.Add('Enable', (Get-SslDynamicParameter 'Enable'))
+        $DynamicParameters.Add('Disable', (Get-SslDynamicParameter 'Disable'))
+        return $DynamicParameters
+    }
+
+    begin {
+        $Enable = $PSBoundParameters.Enable
+        $Disable = $PSBoundParameters.Disable
+    }
+
+
+    end {
+        $RegValues = @{}
+
+        if ($Enable) {
+            foreach ($Key in $Enable) {
+                $RegValues.Add($Key, $RegLookup[$Key].Value_Enabled)
+            }
+        }
+        if ($Disable) {
+            foreach ($Key in $Disable) {
+                if (-not $RegValues.Contains($Key)) {
+                    $RegValues.Add($Key, $RegLookup[$Key].Value_Disabled)
+                }
+            }
+        }
+        return $RegValues
+    }
+}
+
+
 function Get-SslRegValues {
 <#
     .Synopsis
@@ -218,18 +393,6 @@ function Set-SslRegValues {
     [CmdletBinding(DefaultParameterSetName='RegValues')]
     [OutputType([void])]
     param(
-        [Parameter(ParameterSetName='ProtocolList')]
-        [ValidateSet(
-            'SSL2.0', 'SSL3.0', 'TLS1.0', 'TLS1.1', 'RC4 40', 'RC4 56', 'RC4 64', 'RC4 128', 'Diffie-Hellman', 'ECDH'
-        )]
-        [string[]]$Enable,
-
-        [Parameter(ParameterSetName='ProtocolList')]
-        [ValidateSet(
-            'SSL2.0', 'SSL3.0', 'TLS1.0', 'TLS1.1', 'RC4 40', 'RC4 56', 'RC4 64', 'RC4 128', 'Diffie-Hellman', 'ECDH'
-        )]
-        [string[]]$Disable,
-
         [Parameter(Mandatory=$true, Position=0, ParameterSetName='RegValues')]
         [System.Collections.IDictionary]$RegValues,
 
@@ -240,161 +403,51 @@ function Set-SslRegValues {
         [string]$BackupFile
     )
 
-        
-    if ($PSBoundParameters.ContainsKey('BackupFile')) {
-        Export-SslRegBackup -Path $BackupFile
-        $PSBoundParameters.Remove('BackupFile')
+    dynamicparam {
+        $DynamicParameters = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+        $DynamicParameters.Add(
+            'Enable', 
+            (Get-SslDynamicParameter 'Enable' @{ParameterSetName='ProtocolList'})
+        )
+        $DynamicParameters.Add(
+            'Disable', 
+            (Get-SslDynamicParameter 'Disable' @{ParameterSetName='ProtocolList'})
+        )
+        return $DynamicParameters
     }
-
-    if ($PSCmdlet.ParameterSetName -eq 'ProtocolList') {
-        $RegValues = New-SslRegValues @PSBoundParameters
-    }
-
-    #Use the properties from supplied hashtable to look up in reg and populate new hashtable
-    foreach ($Key in $RegValues.Keys) {
-        $Splat = @{
-            LiteralPath = $RegLookup[$Key].RegLiteralPath;
-            Name = $RegLookup[$Key].RegProperty;
-            Value = $RegValues[$Key];
-            ErrorAction = 'Stop';
-            Force = $true;
+    
+    begin {
+        if ($PSBoundParameters.ContainsKey('BackupFile')) {
+            Export-SslRegBackup -Path $BackupFile
+            $PSBoundParameters.Remove('BackupFile')
         }
-        if ($PSBoundParameters.ContainsKey('WhatIf')) {$Splat.WhatIf = $PSBoundParameters.WhatIf}
-        try {
-            Set-ItemProperty @Splat
-        } catch [System.Management.Automation.ItemNotFoundException] {
-            New-RegKey $Splat.LiteralPath
-            Set-ItemProperty @Splat
+
+        if ($PSCmdlet.ParameterSetName -eq 'ProtocolList') {
+            $RegValues = New-SslRegValues @PSBoundParameters
         }
     }
-}
 
-function New-RegKey {
-<#
-    .Synopsis
-    Create a registry key
-
-    .Description
-    This exists as a separate function because it makes the code testable
-
-    .Example
-    PS C:\> New-RegKey -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server'
-
-    Creates a new empty registry key at the specified location, if none exists already
-
-    .Link
-    https://msdn.microsoft.com/en-us/library/aa389385(v=vs.85).aspx
-#>
-    [CmdletBinding()]
-    [OutputType([void])]
-    param(
-        [Parameter(Mandatory=$true, Position=0)]
-        [string]$LiteralPath
-    )
-
-    [ValidateSet('HKCR','HKLM', 'HKCC', 'HKU', 'HKCU')]
-    [string]$RootKey = $LiteralPath -replace ':.*'
-
-    [string]$SubKey = $LiteralPath -replace '(HKCR|HKLM|HKCC|HKU|HKCU):\\'
-
-    $RootKeyFlags = switch ($RootKey) {
-        'HKCR' {2147483648}
-        'HKCU' {2147483649}
-        'HKLM' {2147483650}
-        'HKU'  {2147483651}
-        'HKCC' {2147483653}
-    }
-
-    $RegProvider = Get-WmiObject -List -Namespace 'ROOT\DEFAULT' | where {$_.Name -eq 'StdRegProv'}
-    $Result = $RegProvider.CreateKey(
-        $RootKeyFlags,
-        $SubKey
-    )
-
-    switch ($Result.ReturnValue) {
-        0 {return}
-        5 {throw New-Object System.Security.SecurityException ('Requested registry access is not allowed.')}
-        Default {throw "CreateKey failed with return value $_"}
-    }
-
-}
-
-function New-SslRegValues {
-<#
-    .Synopsis
-    Creates a dictionary object of registry values relating to SSL configuration
-
-    .Description
-    Creates a new dictionary object with the correct registry values for any of the ciphers and protocols supported by this module.
-
-    Enable arguments take precedence over disable arguments. If a protocol or cipher is specificed to both the Enable parameter and the Disable parameter, it will be enabled.
-
-    .Parameter Enable
-    A list of ciphers or protocols to enable
-        
-    .Parameter Disable
-    A list of ciphers or protocols to disable
-
-    .Example
-    PS C:\> New-SslRegValues -Enable 'TLS1.1'
-
-    Name                           Value
-    ----                           -----
-    TLS1.1                         1
-
-    .Example
-    PS C:\> New-SslRegValues -Disable 'SSL3.0'
-
-    Name                           Value
-    ----                           -----
-    SSL3.0                         0
-
-    .Example
-    PS C:\> New-SslRegValues -Enable 'TLS1.1' -Disable 'SSL3.0', 'RC4 40', 'RC4 56'
-
-    Name                           Value
-    ----                           -----
-    SSL3.0                         0
-    TLS1.1                         1
-    RC4 40                         0
-    RC4 56                         0
-
-#>
-    [CmdletBinding()]
-    [OutputType([System.Collections.IDictionary])]
-    param(
-        [Parameter()]
-        [ValidateSet(
-            'SSL2.0', 'SSL3.0', 'TLS1.0', 'TLS1.1', 'RC4 40', 'RC4 56', 'RC4 64', 'RC4 128', 'Diffie-Hellman', 'ECDH'
-        )]
-        [string[]]$Enable,
-
-        [Parameter()]
-        [ValidateSet(
-            'SSL2.0', 'SSL3.0', 'TLS1.0', 'TLS1.1', 'RC4 40', 'RC4 56', 'RC4 64', 'RC4 128', 'Diffie-Hellman', 'ECDH'
-        )]
-        [string[]]$Disable,
-
-        [Parameter()]
-        [System.Collections.IDictionary]$RegLookup = (Get-SslRegLookupTable)
-    )
-
-    $RegValues = @{}
-
-    if ($Enable) {
-        foreach ($Key in $Enable) {
-            $RegValues.Add($Key, $RegLookup[$Key].Value_Enabled)
-        }
-    }
-    if ($Disable) {
-        foreach ($Key in $Disable) {
-            if (-not $RegValues.Contains($Key)) {
-                $RegValues.Add($Key, $RegLookup[$Key].Value_Disabled)
+    end {
+        #Use the properties from supplied hashtable to look up in reg and populate new hashtable
+        foreach ($Key in $RegValues.Keys) {
+            $Splat = @{
+                LiteralPath = $RegLookup[$Key].RegLiteralPath;
+                Name = $RegLookup[$Key].RegProperty;
+                Value = $RegValues[$Key];
+                ErrorAction = 'Stop';
+                Force = $true;
             }
-        }
+            if ($PSBoundParameters.ContainsKey('WhatIf')) {$Splat.WhatIf = $PSBoundParameters.WhatIf}
+            try {
+                Set-ItemProperty @Splat
+            } catch [System.Management.Automation.ItemNotFoundException] {
+                New-RegKey $Splat.LiteralPath
+                Set-ItemProperty @Splat
+            }
+        } #end foreach
     }
-    return $RegValues
 }
+
 
 function Get-SslRegReport {
 <#
@@ -519,7 +572,6 @@ function Get-SslRegReport {
 }
 
 
-
 function Export-SslRegBackup {
 <#
     .Synopsis
@@ -556,9 +608,11 @@ function Export-SslRegBackup {
 
 }
 
+#endregion public functions
+
 
 Export-ModuleMember @(
-    'Get-SslRegLookupTable',
+    #'Get-SslRegLookupTable',
     'Get-SslRegReport',
     'Get-SslRegValues',
     'New-SslRegValues',

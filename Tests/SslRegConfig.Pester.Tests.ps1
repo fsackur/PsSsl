@@ -4,6 +4,7 @@ $Global:RegParentPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProvider
 $Global:NotFoundException = New-Object System.Management.Automation.ItemNotFoundException ("Cannot find path '$RegParentPath\Protocols\TLS 1.1\Server' because it does not exist.")
 $Global:MOCK_TLS_11_REGKEY_EXISTS = $false
 
+
 Describe 'Reg functions' {
     Mock 'Get-ItemProperty' -ModuleName SslRegConfig -MockWith {
         switch ($LiteralPath) {
@@ -138,13 +139,15 @@ Describe 'Parameter validation' {
             {Set-SslRegValues -Disable 'asdgasgasgasfasf'} | Should Throw "Cannot validate argument on parameter"
         }
 
-        It 'Accepts any key from lookup table of supported elements' {
-            $RegLookup = Get-SslRegLookupTable
-            foreach ($Key in $RegLookup.Keys) {
-                #{New-SslRegValues -Enable $Key}  | Should Not Throw
-                #{New-SslRegValues -Disable $Key} | Should Not Throw
-                {Set-SslRegValues -Enable $Key}  | Should Not Throw
-                {Set-SslRegValues -Disable $Key} | Should Not Throw
+        InModuleScope 'SslRegConfig' {
+            It 'Accepts any key from lookup table of supported elements' {
+                $RegLookup = Get-SslRegLookupTable
+                foreach ($Key in $RegLookup.Keys) {
+                    #{New-SslRegValues -Enable $Key}  | Should Not Throw
+                    #{New-SslRegValues -Disable $Key} | Should Not Throw
+                    {Set-SslRegValues -Enable $Key}  | Should Not Throw
+                    {Set-SslRegValues -Disable $Key} | Should Not Throw
+                }
             }
         }
 
