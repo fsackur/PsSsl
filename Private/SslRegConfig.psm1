@@ -633,7 +633,11 @@
         [OutputType([bool])]
         param()
 
-        if ([version](Get-WmiObject Win32_OperatingSystem).Version -lt [version]"6.2") {
+        $OsVersion = [version](Get-WmiObject Win32_OperatingSystem).Version
+        if ($OsVersion -lt [version]"6.1") {
+            return $false
+        }
+        if ($OsVersion -ge [version]"6.2") {
             return $true
         }
         $RdpHotfix = Get-WmiObject Win32_QuickFixEngineering -Filter "HotFixID LIKE 'KB3080079'"
