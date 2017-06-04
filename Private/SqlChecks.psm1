@@ -236,7 +236,7 @@ param ()
         $RegPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client'
         $RegValue = (Get-ItemProperty $RegPath -Name 'Enabled' -ErrorAction Stop).Enabled
         $ClientTls11Enabled = $RegValue -ge 1
-    } catch [System.Management.Automation.ItemNotFoundException] {
+    } catch [System.Management.Automation.ItemNotFoundException], [System.Management.Automation.ActionPreferenceStopException] {
         $ClientTls11Enabled = $OsVersion -ge [version]"6.2"
     }
         
@@ -245,7 +245,7 @@ param ()
         $RegPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Client'
         $RegValue = (Get-ItemProperty $RegPath -Name 'Enabled' -ErrorAction Stop).Enabled
         $ClientTls12Enabled = $RegValue -ge 1
-    } catch [System.Management.Automation.ItemNotFoundException] {
+    } catch [System.Management.Automation.ItemNotFoundException], [System.Management.Automation.ActionPreferenceStopException] {
         $ClientTls12Enabled = $OsVersion -ge [version]"6.2"
     }
     #endregion Schannel client config discovery
