@@ -336,7 +336,7 @@ param ()
             $DbEngineInstances | where {-not $_.SupportsTls12} | select -ExpandProperty Instance)
         $Output.DbEngine | Add-Member -MemberType NoteProperty -Name UpdatesRequired -Value $DbRequiredUpdates
         $Output.DbEngine | Add-Member -MemberType NoteProperty -Name SupportsTls12 -Value ($DbRequiredUpdates.Count -eq 0)
-        $Output.SupportsTls12 = $Output.SupportsTls12 -and $Output.DbEngine.SqlSupportsTls12
+        $Output.SupportsTls12 = $Output.SupportsTls12 -and $Output.DbEngine.SupportsTls12
     }
     
 
@@ -348,6 +348,11 @@ param ()
 
             if ($DotNetClientVersion -ge [version]"4.0" -and $DotNetClientVersion -lt [version]"4.5") {
                 $DotNetUpdatesRequired += 'Install KB3106994 from https://support.microsoft.com/en-us/help/3106994'
+                
+            } elseif ($OsVersion.Major -lt 6) {
+                #2003
+                $DotNetUpdatesRequired += "limited to TLS 1.0 for this OS version"
+
             } else {
                 #Win 10 ships with 4.6 so we know OS major version -eq 6
                 switch ($OsVersion.Minor) {
@@ -362,7 +367,7 @@ param ()
                         }
 
                     #2008 RTM & R2
-                    1   {
+                    {$_ -le 1}   {
                             switch ($DotNetClientVersion) {
                                 {$_ -ge [version]"4.5.3"} {break}
 
@@ -383,8 +388,7 @@ param ()
                             }
                         }
 
-                    default {$DotNetUpdatesRequired += "OS is not supported"}
-
+                    default {$DotNetUpdatesRequired += "OS not recognised"}
                 }
             }
         }
@@ -457,8 +461,10 @@ param ()
     #endregion Populate component reports
 
 
-    $Output.DbEngine, $Output.AdoNet, $Output.Snac, $Output.Odbc | 
-        where {$_.UpdatesRequired} | foreach {$Output.UpdatesRequired += $_.UpdatesRequired}
+    $Output.DbEngine.UpdatesRequired | where {$_} | foreach {$Output.UpdatesRequired += "SQL: {0}" -f $_}
+    $Output.AdoNet.UpdatesRequired   | where {$_} | foreach {$Output.UpdatesRequired += ".NET: {0}" -f $_}
+    $Output.Snac.UpdatesRequired     | where {$_} | foreach {$Output.UpdatesRequired += "SNAC: {0}" -f $_}
+    $Output.Odbc.UpdatesRequired     | where {$_} | foreach {$Output.UpdatesRequired += "ODBC: {0}" -f $_}
 
     return $Output
 }
