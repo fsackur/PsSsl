@@ -1,7 +1,4 @@
-﻿
-
-
-function Get-NetFrameworkVersion {
+﻿function Get-NetFrameworkVersion {
     <#
 
     Script Name	: Get-NetFrameworkVersion.ps1
@@ -64,11 +61,9 @@ function Get-NetFrameworkVersion {
     }
 }
 
-
-
-
 function Get-InstalledPrograms {
     #from https://github.com/Microsoft/tigertoolbox/tree/master/tls1.2
+    #We use this rather than Win32_Product because it's faster and because querying the WMI class can trigger actions
     $array = @()
     
     #Define the variable to hold the location of Currently Installed Programs
@@ -95,10 +90,35 @@ function Get-InstalledPrograms {
     return $array
 }
 
-
 function Get-SqlTlsUpdatesRequired {
+<#
+    .Synopsis
+    Given a SQL version, returns the updates that must be applied before disabling TLS 1.0
+
+    .Description
+    This is just a big switch statement based on the info at https://sqlserverbuilds.blogspot.co.uk/
+
+    Output is an array of strings; one per update
+
+    Strings are human readable, and tell you what to install and what URL to download it from
+
+    .Parameter Version
+    SQL version to check
+
+    .Example
+    Get-SqlTlsUpdatesRequired 10.50.0.4000
+
+    Apply SP3 from http://www.microsoft.com/en-us/download/details.aspx?id=44271
+    Apply TLS hotfix from https://support.microsoft.com/en-us/hotfix/kbhotfix?kbnum=3144113&kbln=en-us
+    Apply intermittent service termination hotfix from https://support.microsoft.com/en-us/kb/3146034
+
+    .Link
+    https://sqlserverbuilds.blogspot.co.uk/
+#>
+    [CmdletBinding()]
+    [OutputType([string[]])]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true, Position=0)]
         [version]$Version
     )
 
@@ -176,27 +196,106 @@ function Get-SqlTlsUpdatesRequired {
     return $KBs
 }
 
+function Get-SqlTls12Readiness {
+<#
+    .Synopsis
+    Assesses safety of disabling TLS 1.0 and below on SQL Server components that the current machine either serves or connects to
 
-function Get-SqlTls12Report {
+    .Description
+    Assesses safety of disabling TLS 1.0 and below on SQL Server components that the current machine either serves or connects to.
 
+    Checks database engine, ADO.NET, SQL native client, and ODBC.
+
+    Returns a structured psobject.
+#>
+[CmdletBinding()]
+param ()
+
+    #region Installed program discovery
     $MssqlPrograms = Get-InstalledPrograms | where {$_.DisplayName -match 'SQL' -and $_.Publisher -match 'Microsoft'}
     $DbEnginePrograms = $MssqlPrograms | where {$_.DisplayName -match 'Database Engine'}
     $AdoNetPrograms = $MssqlPrograms | where {$_.DisplayName -match 'Report|Management Studio'}
     $NativeClientPrograms = $MssqlPrograms | where {$_.DisplayName -match 'Native Client'}
     $OdbcPrograms = $MssqlPrograms | where {$_.DisplayName -match 'ODBC'}
         
+    #Script provides poor output; parse to get a version from the newest version installed
+    #Null if .NET is not installed
+    $DotNetClientVersion = Get-NetFrameworkVersion | 
+        sort NetFXVersion | 
+        select -Last 1 |
+        select -ExpandProperty NetFxVersion |
+        foreach {$_ -replace '.NET Framework ' -replace ' .*'} |
+        foreach {[version]$_}
+    #endregion Installed program discovery
 
-    $Report = New-Object psobject -Property @{
-        ComputerName = $env:COMPUTERNAME
-        SupportsTls12 = $true
+
+    #region Schannel client config discovery
+    $OsVersion = [version](Get-WmiObject Win32_OperatingSystem).Version
+    $ClientTls11Enabled = $true
+    try {
+        $RegPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client'
+        $RegValue = (Get-ItemProperty $RegPath -Name 'Enabled' -ErrorAction Stop).Enabled
+        $ClientTls11Enabled = $RegValue -ge 1
+    } catch [System.Management.Automation.ItemNotFoundException] {
+        $ClientTls11Enabled = $OsVersion -ge [version]"6.2"
+    }
+        
+    $ClientTls12Enabled = $true
+    try {
+        $RegPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Client'
+        $RegValue = (Get-ItemProperty $RegPath -Name 'Enabled' -ErrorAction Stop).Enabled
+        $ClientTls12Enabled = $RegValue -ge 1
+    } catch [System.Management.Automation.ItemNotFoundException] {
+        $ClientTls12Enabled = $OsVersion -ge [version]"6.2"
+    }
+    #endregion Schannel client config discovery
+
+
+    #region Create output object
+    #Makes display of structured object more useful; overrides default ToString() of sub-objects
+    $ToString = {
+        if (-not $this.Installed) {return "Not installed"}
+        if ($this.SupportsTls12) {return "Supports TLS 1.2"}
+        return "Does not support TLS 1.2"
     }
 
-
-    if ($DbEnginePrograms) {
+    #PS v2 doesn't support ordered hashtable so, if we want our properties ordered, we need to use Add-Member.
+    $Output = New-Object psobject |
+        Add-Member -PassThru -MemberType NoteProperty -Name ComputerName -Value $env:COMPUTERNAME |
+        Add-Member -PassThru -MemberType NoteProperty -Name SupportsTls12 -Value $true |  #this gets ANDed with all the assessment results
+        Add-Member -PassThru -MemberType NoteProperty -Name ClientTls11Enabled -Value $ClientTls11Enabled |
+        Add-Member -PassThru -MemberType NoteProperty -Name ClientTls12Enabled -Value $ClientTls12Enabled |
+        Add-Member -PassThru -MemberType NoteProperty -Name DbEngine -Value (
+                New-Object psobject | 
+                    Add-Member -PassThru -MemberType ScriptMethod -Name ToString -Value $ToString -Force |
+                    Add-Member -PassThru -MemberType NoteProperty -Name Installed -Value $false
+                ) |
+        Add-Member -PassThru -MemberType NoteProperty -Name AdoNet -Value (
+                New-Object psobject | 
+                    Add-Member -PassThru -MemberType ScriptMethod -Name ToString -Value $ToString -Force |
+                    Add-Member -PassThru -MemberType NoteProperty -Name Installed -Value $false
+                ) |
+        Add-Member -PassThru -MemberType NoteProperty -Name Snac -Value (
+                New-Object psobject | 
+                    Add-Member -PassThru -MemberType ScriptMethod -Name ToString -Value $ToString -Force |
+                    Add-Member -PassThru -MemberType NoteProperty -Name Installed -Value $false
+                ) |
+        Add-Member -PassThru -MemberType NoteProperty -Name Odbc -Value (
+                New-Object psobject | 
+                    Add-Member -PassThru -MemberType ScriptMethod -Name ToString -Value $ToString -Force |
+                    Add-Member -PassThru -MemberType NoteProperty -Name Installed -Value $false
+                ) |
+        Add-Member -PassThru -MemberType NoteProperty -Name UpdatesRequired -Value @()
+    #endregion Create output object
         
+
+    #region Populate component reports
+    if ($DbEnginePrograms) {
+        $Output.DbEngine.Installed = $true
+
         $DbRequiredUpdates = @()
 
-        #Sometimes installing updates doesn't update the SQL version in the reg key. A more reliable way to check
+        #Sometimes installing updates doesn't update the SQL version in the reg key. File version is reliable
         $DbEngineInstances = Get-WmiObject Win32_Service -Filter "PathName LIKE '%sqlservr.exe%'" | select `
             @{Name='Instance'; Expression={$_.DisplayName -replace '.*\(' -replace '\)'}},
             PathName
@@ -231,28 +330,18 @@ function Get-SqlTls12Report {
 
         $DbRequiredUpdates = $DbRequiredUpdates | select -Unique
 
-        $Report | Add-Member -MemberType NoteProperty -Name SqlInstancesInstalled -Value (
+        $Output.DbEngine | Add-Member -MemberType NoteProperty -Name SqlInstancesInstalled -Value (
             $DbEngineInstances | select -ExpandProperty Instance)
-        $Report | Add-Member -MemberType NoteProperty -Name SqlInstancesNoTls12 -Value (
+        $Output.DbEngine | Add-Member -MemberType NoteProperty -Name SqlInstancesNoTls12 -Value (
             $DbEngineInstances | where {-not $_.SupportsTls12} | select -ExpandProperty Instance)
-        $Report | Add-Member -MemberType NoteProperty -Name SqlUpdatesRequired -Value $DbRequiredUpdates
-        $Report | Add-Member -MemberType NoteProperty -Name SqlSupportsTls12 -Value ($DbRequiredUpdates.Count -eq 0)
-        $Report.SupportsTls12 = $Report.SupportsTls12 -and $Report.SqlSupportsTls12
+        $Output.DbEngine | Add-Member -MemberType NoteProperty -Name UpdatesRequired -Value $DbRequiredUpdates
+        $Output.DbEngine | Add-Member -MemberType NoteProperty -Name SupportsTls12 -Value ($DbRequiredUpdates.Count -eq 0)
+        $Output.SupportsTls12 = $Output.SupportsTls12 -and $Output.DbEngine.SqlSupportsTls12
     }
     
 
-    if ($AdoNetPrograms) {
-
-        $OsVersion = [version](Get-WmiObject Win32_OperatingSystem).Version
-
-        #Script provides poor output; parse to get a version from the newest version installed
-        $DotNetClientVersion = Get-NetFrameworkVersion.ps1 | 
-            sort NetFXVersion | 
-            select -Last 1 |
-            select -ExpandProperty NetFxVersion |
-            foreach {$_ -replace '.NET Framework ' -replace ' .*'} |
-            foreach {[version]$_}
-
+    if ($AdoNetPrograms -or $DotNetClientVersion) {
+        $Output.AdoNet.Installed = $true
 
         $DotNetUpdatesRequired = @()
         if ($DotNetClientVersion -lt [version]"4.6") {
@@ -300,39 +389,18 @@ function Get-SqlTls12Report {
             }
         }
 
-        
-        $ClientTls11Enabled = $true
-        try {
-            $RegPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client'
-            $RegValue = (Get-ItemProperty $RegPath -Name 'Enabled' -ErrorAction Stop).Enabled
-            $ClientTls11Enabled = $RegValue -eq 1
-        } catch [System.Management.Automation.ItemNotFoundException] {
-            $ClientTls11Enabled = $OsVersion -ge [version]"6.2"
-        }
-        
-        $ClientTls12Enabled = $true
-        try {
-            $RegPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Client'
-            $RegValue = (Get-ItemProperty $RegPath -Name 'Enabled' -ErrorAction Stop).Enabled
-            $ClientTls12Enabled = $RegValue -eq 1
-        } catch [System.Management.Automation.ItemNotFoundException] {
-            $ClientTls12Enabled = $OsVersion -ge [version]"6.2"
-        }
-
-
-        $Report | Add-Member -MemberType NoteProperty -Name AdoNetComponentsInstalled -Value (
+        $Output.AdoNet | Add-Member -MemberType NoteProperty -Name AdoNetComponentsInstalled -Value (
             $AdoNetPrograms | select -ExpandProperty DisplayName | select -Unique)
-        $Report | Add-Member -MemberType NoteProperty -Name DotNetVersion -Value $DotNetClientVersion
-        $Report | Add-Member -MemberType NoteProperty -Name DotNetUpdatesRequired -Value $DotNetUpdatesRequired
-        $Report | Add-Member -MemberType NoteProperty -Name ClientTls11Enabled -Value $ClientTls11Enabled
-        $Report | Add-Member -MemberType NoteProperty -Name ClientTls12Enabled -Value $ClientTls12Enabled
-        $Report | Add-Member -MemberType NoteProperty -Name AdoNetSupportsTls12 -Value (
-            $DotNetUpdatesRequired.Count-eq 0 -and ($ClientTls11Enabled -or $ClientTls12Enabled))
-        $Report.SupportsTls12 = $Report.SupportsTls12 -and $Report.AdoNetSupportsTls12
+        $Output.AdoNet | Add-Member -MemberType NoteProperty -Name DotNetVersion -Value $DotNetClientVersion
+        $Output.AdoNet | Add-Member -MemberType NoteProperty -Name UpdatesRequired -Value $DotNetUpdatesRequired
+        $Output.AdoNet | Add-Member -MemberType NoteProperty -Name SupportsTls12 -Value (
+            $DotNetUpdatesRequired.Count -eq 0 -and ($ClientTls11Enabled -or $ClientTls12Enabled))
+        $Output.SupportsTls12 = $Output.SupportsTls12 -and $Output.AdoNet.SupportsTls12
     }
 
 
     if ($NativeClientPrograms) {
+        $Output.Snac.Installed = $true
 
         $UpdatesRequired = @()
 
@@ -357,16 +425,17 @@ function Get-SqlTls12Report {
             }
         }
         
-        $Report | Add-Member -MemberType NoteProperty -Name SqlNativeClientInstalled -Value (
+        $Output.Snac | Add-Member -MemberType NoteProperty -Name NativeClientInstalled -Value (
             $NativeClientPrograms | select -ExpandProperty DisplayName | select -Unique)
-        $Report | Add-Member -MemberType NoteProperty -Name SqlNativeClientUpdatesRequired -Value (
+        $Output.Snac | Add-Member -MemberType NoteProperty -Name UpdatesRequired -Value (
             $UpdatesRequired | select -Unique)
-        $Report | Add-Member -MemberType NoteProperty -Name SqlNativeClientSupportsTls12 -Value ($UpdatesRequired.Count -eq 0)
-        $Report.SupportsTls12 = $Report.SupportsTls12 -and $Report.SqlNativeClientSupportsTls12
+        $Output.Snac | Add-Member -MemberType NoteProperty -Name SupportsTls12 -Value ($UpdatesRequired.Count -eq 0)
+        $Output.SupportsTls12 = $Output.SupportsTls12 -and $Output.Snac.SupportsTls12
     }
 
 
     if ($OdbcPrograms) {
+        $Output.Odbc.Installed = $true
 
         $UpdatesRequired = @()
 
@@ -378,23 +447,18 @@ function Get-SqlTls12Report {
             }
         }
 
-        $Report | Add-Member -MemberType NoteProperty -Name OdbcDriverInstalled -Value (
+        $Output.Odbc | Add-Member -MemberType NoteProperty -Name OdbcDriverInstalled -Value (
             $OdbcPrograms | select -ExpandProperty DisplayName | select -Unique)
-        $Report | Add-Member -MemberType NoteProperty -Name OdbcDriverUpdatesRequired -Value (
+        $Output.Odbc | Add-Member -MemberType NoteProperty -Name UpdatesRequired -Value (
             $UpdatesRequired | select -Unique)
-        $Report | Add-Member -MemberType NoteProperty -Name OdbcSupportsTls12 -Value ($UpdatesRequired.Count -eq 0)
-        $Report.SupportsTls12 = $Report.SupportsTls12 -and $Report.OdbcSupportsTls12
+        $Output.Odbc | Add-Member -MemberType NoteProperty -Name SupportsTls12 -Value ($UpdatesRequired.Count -eq 0)
+        $Output.SupportsTls12 = $Output.SupportsTls12 -and $Output.Odbc.SupportsTls12
     }
+    #endregion Populate component reports
 
 
-    return $Report
+    $Output.DbEngine, $Output.AdoNet, $Output.Snac, $Output.Odbc | 
+        where {$_.UpdatesRequired} | foreach {$Output.UpdatesRequired += $_.UpdatesRequired}
+
+    return $Output
 }
-
-$Report = Get-SqlTls12Report
-
-Write-Host "In brief:"
-Write-Host "------------------------------------------"
-Write-Output $Report | ft *SupportsTls12
-Write-Host "Full output:"
-Write-Host "------------------------------------------"
-$Report | fl
