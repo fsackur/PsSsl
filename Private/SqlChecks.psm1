@@ -196,7 +196,7 @@ function Get-SqlTlsUpdatesRequired {
     return $KBs
 }
 
-function Get-SqlTls12Readiness {
+function Test-SqlTls12Readiness {
 <#
     .Synopsis
     Assesses safety of disabling TLS 1.0 and below on SQL Server components that the current machine either serves or connects to
