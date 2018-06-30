@@ -1,27 +1,32 @@
 function Set-SslRegValue
 {
     <#
+        .SYNOPSIS
+        Sets a registry value for an SSL component.
+
         .DESCRIPTION
-        Sets the registry value for the schannel element
+        Sets a registry value for an SSL component.
 
-        .EXAMPLE
-        PS C:\> $Element = $Elements | where {$_.Name -eq 'TLS 1.0'}
-        PS C:\> $Element.SetRegValue(0)
-
-        .EXAMPLE
-        PS C:\> $Element = $Elements | where {$_.Name -eq 'TLS 1.0'}
-        PS C:\> $Changes = New-Object System.Collections.Generic.List[string]
-        PS C:\> $Element.SetRegValue(0, $Changes)
-        PS C:\> $Changes
-        TLS 1.0\Server\Enabled changed from 1 to 0
+        .OUTPUTS
+        [void]
+        This command does not return any output.
 
         .PARAMETER RegValue
         The value to be saved in the registry for the current element's reg path. Type varies depending on reg value type.
 
         .PARAMETER ChangeLog
         An optional string collection for verbose output. If this is not specified, verbose output follows VerbosePreference.
+
+        .EXAMPLE
+        $Element = $Elements | where {$_.Name -eq 'TLS 1.0'}
+        Get-SslRegState -SslComponent $Element -RegValue 1
+
+        Sets the registry value governing the 'TLS 1.0' component to 1.
     #>
-    param (
+    [CmdletBinding()]
+    [OutputType([void])]
+    param
+    (
         [Parameter(Mandatory = $true, Position = 0)]
         $SslComponent,
 
@@ -31,7 +36,9 @@ function Set-SslRegValue
         [Parameter()]
         [System.Collections.Generic.List[string]]$ChangeLog
     )
+
     $PreviousValue = $SslComponent.RegValue
+
     try
     {
         #Create key if it doesn't exist. Have to use .CreateSubKey() because New-Item doesn't support forward slash
@@ -94,6 +101,7 @@ function Set-SslRegValue
             Write-Verbose $LogEntry
         }
     }
+
     catch
     {
         $LogEntry = ($SslComponent.RegChildPath, $SslComponent.RegName -join '\') +

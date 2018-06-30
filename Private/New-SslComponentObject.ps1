@@ -1,21 +1,75 @@
-function New-SslConfigElement
+function New-SslComponentObject
 {
     <#
-        .Synopsis
-        Returns a configurable Schannel element
+        .SYNOPSIS
+        Returns a configurable SSL component.
 
-        .Description
-        Workaround for no class support. Returns object with CurrentState property and Enable() and Disable() methods
+        .DESCRIPTION
+        Returns an object representing a component of SSL configuration.
+
+        The object has CurrentState property and Enable() and Disable() methods.
+
+        .OUTPUTS
+        [psobject]
+        An object representing a component of SSL configuration.
+
+        .PARAMETER ElementName
+        Parameter description
+
+        .PARAMETER RegMidPath
+        Parameter description
+
+        .PARAMETER RegChildPath
+        Parameter description
+
+        .PARAMETER RegName
+        Parameter description
+
+        .PARAMETER RegType
+        Parameter description
+
+        .PARAMETER RegValue_Disabled
+        Parameter description
+
+        .PARAMETER RegValue_Enabled
+        Parameter description
+
+        .PARAMETER RegParentPath
+        Parameter description
+
+        .EXAMPLE
+        An example
+
+        .NOTES
+        Workaround for no class support in old versions of Powershell.
     #>
-    param (
-        $ElementName,
-        $RegMidPath,
-        $RegChildPath,
-        $RegName,
-        $RegType,
-        $RegValue_Disabled,
-        $RegValue_Enabled,
-        $RegParentPath = $Script:RegParentPath
+    [CmdletBinding()]
+    [OutputType([psobject[]])]
+    param
+    (
+        [Parameter(Mandatory)]
+        [string]$ElementName,
+
+        [Parameter(Mandatory)]
+        [string]$RegMidPath,
+
+        [Parameter(Mandatory)]
+        [string]$RegChildPath,
+
+        [Parameter(Mandatory)]
+        [string]$RegName,
+
+        [Parameter(Mandatory)]
+        [string]$RegType,
+
+        [Parameter(Mandatory)]
+        [string]$RegValue_Disabled,
+
+        [Parameter(Mandatory)]
+        [string]$RegValue_Enabled,
+
+        [Parameter()]
+        [string]$RegParentPath = $Script:RegParentPath
     )
 
     try {[void]$PSBoundParameters.Remove('RegParentPath')} catch {}

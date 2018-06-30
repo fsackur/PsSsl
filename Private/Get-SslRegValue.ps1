@@ -2,27 +2,30 @@ function Get-SslRegValue
 {
     <#
         .SYNOPSIS
-        Short description
+        Gets the registry value for an SSL component.
 
         .DESCRIPTION
-        Long description
+        Gets the registry value for an SSL component.
 
         .OUTPUTS
-        Reg value
+        [uint32]
+        [string]
+        Registry value.
 
         .EXAMPLE
-        An example
+        $Element = $Elements | where {$_.Name -eq 'TLS 1.0'}
+        Get-SslRegState -SslComponent $Element
 
-        .NOTES
-        General notes
+        Gets the registry value governing the 'TLS 1.0' component.
     #>
-
     [CmdletBinding()]
+    [OutputType([void])]
     param
     (
         [Parameter(Mandatory = $true, Position = 0)]
         $SslComponent
     )
+
     try
     {
         $SslComponent.RegValue = (
