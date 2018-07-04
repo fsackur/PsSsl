@@ -4,6 +4,9 @@
         Sadly, the following seems to need admin:
         $env:ChocolateyInstall = (New-Item Packages -ItemType Directory)
         choco install openssl.light -y
+
+        Register-PackageSource -Name NuGetv2 -ProviderName NuGet -Location https://www.nuget.org/api/v2
+        Install-Package openssl-vc141 -Source NuGetv2 -RequiredVersion 1.1.0 -Path Packages -Scope CurrentUser
     #>
     [CmdletBinding()]
     param
