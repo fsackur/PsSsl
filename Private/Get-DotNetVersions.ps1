@@ -56,6 +56,10 @@ function Get-DotNetVersion {
             394806 = 'v4.6.2'
             460798 = 'v4.7'
             460805 = 'v4.7'
+            461308 = 'v4.7.1'
+            461310 = 'v4.7.1'
+            461808 = 'v4.7.2'
+            461814 = 'v4.7.2'
         }
 
         $RegKey = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP'
