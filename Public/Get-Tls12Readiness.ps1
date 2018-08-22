@@ -38,7 +38,7 @@ function Get-Tls12Readiness
         $Output.WikiLink = $WikiLink
 
 
-        $Output.RdpReadiness        = Get-Tls12RdpReadiness
+        $Output.RdpReadiness        = Get-Tls12RdpReadiness -OperatingSystem $WmiOS
         $Output.AdoDotNetReadiness  = Get-Tls12AdoDotNetReadiness
         $Output.DbEngineReadiness   = Get-Tls12DbEngineReadiness
         $Output.MbuReadiness        = Get-Tls12MbuReadiness
