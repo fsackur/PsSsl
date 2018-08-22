@@ -66,7 +66,8 @@
                 {
                     3       # 2012 R2
                     {
-                        if ($Hotfixes | Where-Object {$_.HotfixID -eq 'KB3099842'})
+                        $KB3099842 = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB3099842'}
+                        if ($KB3099842)
                         {
                             $Output.SupportsTls12 = $true
                         }
@@ -79,7 +80,8 @@
 
                     2       # 2012 RTM
                     {
-                        if ($Hotfixes | Where-Object {$_.HotfixID -eq 'KB3099844'})
+                        $KB3099844 = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB3099844'}
+                        if ($KB3099844)
                         {
                             $Output.SupportsTls12 = $true
                         }
