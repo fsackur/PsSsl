@@ -18,8 +18,6 @@ function Get-Tls12Readiness
             'OdbcReadiness',
             'SnacReadiness'
         )
-
-        $WikiLink = 'https://rax.io/Win-Disabling-TLS'
     }
 
     process
@@ -35,8 +33,12 @@ function Get-Tls12Readiness
         $WmiOS           = Get-WmiObject Win32_OperatingSystem
         $Output.OS       = $WmiOS.Caption
 
-        $Output.WikiLink = $WikiLink
+        $Output.WikiLink = 'https://rax.io/Win-Disabling-TLS'
 
+        if ([version]$WmiOS.Version -lt [version]"6.1")
+        {
+            $RequiredUpdates += "Install KB4019276 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB4019276"
+        }
 
         $Output.RdpReadiness        = Get-Tls12RdpReadiness -OperatingSystem $WmiOS
         $Output.AdoDotNetReadiness  = Get-Tls12AdoDotNetReadiness
