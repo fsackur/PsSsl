@@ -1,28 +1,33 @@
 function Get-CommvaultVersion
 {
     <#
-        .Synopsis
-        Get the version of the CommVault agent
+        .SYNOPSIS
+        Gets the version of the Commvault agent.
 
-        .Description
-        Returns version object.
+        .DESCRIPTION
+        Gets the version of the Commvault agent. Returns null if Commvault is not installed.
 
-        $null output indicates that CommVault is not installed.
+        .OUTPUTS
+        [version]
 
-        .Link
+        .LINK
         https://one.rackspace.com/display/MBU/MS+SQL+Backup+failure+when+TLS+1.0+Disabled
     #>
-    $CommVaultServices = Get-WmiObject Win32_Service -Filter "DisplayName LIKE 'CommVault%'"
+    [CmdletBinding()]
+    [OutputType([version])]
+    param ()
 
-    if ($null -eq $CommVaultServices) {
+    $CommvaultServices = Get-WmiObject Win32_Service -Filter "DisplayName LIKE 'CommVault%'"
+
+    if ($null -eq $CommvaultServices) {
         return $null
     }
 
-    $ClBackup = $CommVaultServices |
-        foreach {$_.PathName -replace "^(\'|`")" -replace "('|`").*"} |   #just get executable path of service
-        foreach {Get-ChildItem (Split-Path $_) -Filter 'CLBackup.exe'} |  #in case different paths, check all
-        select -First 1
+    $ClBackupExeFile = $CommvaultServices |
+        ForEach-Object {$_.PathName -replace "^(\'|`")" -replace "('|`").*"} |   #just get executable path of service
+        ForEach-Object {Get-ChildItem (Split-Path $_) -Filter 'CLBackup.exe'} |  #in case different paths, check all
+        Select-Object -First 1
 
-    return [version]$ClBackup.VersionInfo.FileVersion
+    return [version]$ClBackupExeFile.VersionInfo.FileVersion
 
 }

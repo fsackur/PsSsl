@@ -27,9 +27,21 @@
 
     process
     {
+        $CommvaultVersion = Get-CommvaultVersion
+
         $Output = New-Object PSObject -Property @{
-            SupportsTls12   = $false
-            RequiredUpdates = @()
+            SupportsTls12    = $false
+            RequiredUpdates  = @()
+            CommvaultVersion = $CommvaultVersion
+        }
+
+        $Output.SupportsTls = (
+            ($null -eq $CommVaultVersion) -or
+            ($CommVaultVersion -ge [version]"10.0.116.19243")
+        )
+
+        if (-not $Output.SupportsTls) {
+            $Report.RequiredUpdates += "Request MBU team to push Commvault 10 SP14 or above"
         }
     }
 
@@ -38,4 +50,3 @@
         Write-Verbose "[$(Get-Date)] End   :: $($MyInvocation.MyCommand)"
     }
 }
-
