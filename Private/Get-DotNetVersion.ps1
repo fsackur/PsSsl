@@ -1,33 +1,51 @@
 function Get-DotNetVersion {
     <#
         .SYNOPSIS
-        Returns all installed versions of the .NET Framework.
+        Returns all installed versions of the .NET Framework from 2.0 up.
 
         .DESCRIPTION
-        Returns all installed versions of the .NET Framework.
+        Returns all installed versions of the .NET Framework from 2.0 up.
+
+        .NET framework versions below 2.0 are not reported.
+
+        .PARAMETER AsString
+        Specifies to return strings. By default, version objects are returned.
+
+        .OUTPUTS
+        [version[]]
+
+        By default, version objects are returned.
+
+        [string[]]
+
+        When the -AsString parameter is specified, strings are returned.
 
         .EXAMPLE
         Get-DotNetVersion
 
-        Returns all installed versions of the .NET Framework.
+        Major  Minor  Build  Revision
+        -----  -----  -----  --------
+        4      7      1      -1
+        4      0      -1     -1
+        3      5      1      -1
+        3      0      2      -1
+        2      0      2      -1
 
-        .OUTPUTS
-        [psobject[]]
-
-        .LINK
-        https://docs.microsoft.com/en-us/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed
+        Returns all installed versions of the .NET Framework from 2.0 up.
 
         .LINK
         https://support.microsoft.com/en-gb/help/318785/how-to-determine-which-versions-and-service-pack-levels-of-the-microso
-
-        .LINK
-        https://blogs.msdn.microsoft.com/astebner/2005/07/12/what-net-framework-version-numbers-go-with-what-service-pack/
     #>
-    [CmdletBinding()]
-    [OutputType([psobject[]])]
-    param ()
+    [CmdletBinding(DefaultParameterSetName = 'AsVersion')]
+    [OutputType([version[]], ParameterSetName = 'AsVersion')]
+    [OutputType([string[]],  ParameterSetName = 'AsString')]
+    param
+    (
+        [Parameter(ParameterSetName = 'AsString')]
+        [switch]$AsString
+    )
 
-    $Rev45DisplayVersion = '"Revision","DisplayVersion"
+    $V45DisplayVersionLookup = '"Release","DisplayVersion"
         "461814","4.7.2"
         "461808","4.7.2"
         "461310","4.7.1"
@@ -46,63 +64,97 @@ function Get-DotNetVersion {
         "378389","4.5"
     ' | ConvertFrom-Csv
 
-    $VersionToDisplayVersion = '"Version","DisplayVersion"
-        "4.0.30319.1","4.0"
-        "3.5.30729.1","3.5 SP1"
-        "3.5.21022.8","3.5"
-        "3.0.04506.2152","3.0 SP2"
-        "3.0.04506.648","3.0 SP1"
-        "3.0.04506.26","3.0"
-        "2.0.50727.3053","2.0 SP2"
-        "2.0.50727.1433","2.0 SP1"
-        "2.0.50727.42","2.0"
-        "2.0.50215.44","2.0 Beta 2"
-        "2.0.40607.16","2.0 Beta 1"
-        "1.1.4322.2300","1.1 SP1"
-        "1.1.4322.2032","1.1 SP1"
-        "1.1.4322.573","1.1"
-        "1.0.3705.6018","1.0 SP3"
-        "1.0.3705.288","1.0 SP2"
-        "1.0.3705.209","1.0 SP1"
-        "1.0.3705.0","1.0"
-    ' | ConvertFrom-Csv
 
-    $RegKeyPath = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP'
-    $KeyPattern = "^" + [regex]::Escape($RegKeyPath) + "\\(" + ("v4\\(Client|Full)$", "v[2-3].\d(\.\d+)?$" -join "|") + ")"
-    $RegKeys    = Get-RegKey $RegKeyPath -Recurse |
-        Where-Object {$_.Key -match $KeyPattern} |
-        Select-Object Version, Release -Unique
+    $DisplayVersions = New-Object System.Collections.ArrayList
+    $RegKeyPath      = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP'
 
 
-    $DotNetVersions = New-Object System.Collections.ArrayList
+    # .NET 4.5 and above
+    $V45Releases = "$RegKeyPath\v4\Client", "$RegKeyPath\v4\Full" |
+        Get-RegValue -Name Release |
+        Select-Object -ExpandProperty Value -Unique
 
-    foreach ($RegKey in $RegKeys)
+    foreach ($Release in $V45Releases)
     {
-        if ($RegKey.Release)
-        {
-            $Version = [version]($RegKey.Version, $RegKey.Release -join '.')
-        }
-        else
-        {
-            $Version = [version]$RegKey.Version
-        }
-
-        if ($Version -ge [version]"4.1")
-        {
-            $DisplayVersion = $Rev45DisplayVersion | Where-Object {$Version.Revision -ge $_.Revision} | Select-Object -ExpandProperty DisplayVersion -First 1
-            #$dotNet4Builds.GetEnumerator() | Where-Object {$Version.Revision -ge $_.Name} | Select-Object -ExpandProperty Value -Last 1
-        }
-        else
-        {
-            $DisplayVersion = $VersionToDisplayVersion | Where-Object {$Version -ge [version]$_.Version} | Select-Object -ExpandProperty DisplayVersion -First 1
-        }
-
-        $DotNetVersion = New-Object psobject -Property @{
-            Version = $Version
-            DisplayVersion = $DisplayVersion
-        }
-        $null = $DotNetVersions.Add($DotNetVersion)
+        $DisplayVersions += $V45DisplayVersionLookup |
+            Where-Object {$Release -ge $_.Release} |
+            Select-Object -ExpandProperty DisplayVersion -First 1
     }
 
-    $DotNetVersions | Sort-Object Version -Descending
+
+    # .NET 4.0
+    $V40IsInstalled = $null -ne (
+        "$RegKeyPath\v4\Client", "$RegKeyPath\v4\Full" |
+        Get-RegValue -Name Install |
+        Select-Object -ExpandProperty Value -Unique |
+        Where-Object {$_ -band 1}
+    )
+
+    if ($V40IsInstalled) {$DisplayVersions += "4.0"}
+
+
+    # .NET 3.5
+    $V35Key = Get-RegKey "$RegKeyPath\v3.5" |
+        Select-Object Install, SP |
+        Where-Object {$_.Install -band 1}
+
+    if ($V35Key)
+    {
+        if ($V35Key.SP -band 1)
+        {
+            $DisplayVersions += "3.5.1"
+        }
+        else
+        {
+            $DisplayVersions += "3.5"
+        }
+    }
+
+
+    # .NET 3.0
+    $V30IsInstalled = $null -ne (
+        Get-RegValue "$RegKeyPath\v3.0\Setup" -Name InstallSuccess |
+            Where-Object {$_.Value -band 1}
+    )
+
+    $V30ServicePack = Get-RegValue "$RegKeyPath\v3.0" -Name SP |
+        Select-Object -ExpandProperty Value
+
+    if ($V30IsInstalled) {
+        if ($V30ServicePack)
+        {
+            $DisplayVersions += "3.0.$V30ServicePack"
+        }
+        else
+        {
+            $DisplayVersions += "3.0"
+        }
+    }
+
+
+    # .NET 2.0
+    $V20Key = Get-RegKey "$RegKeyPath\v2.0.50727" |
+        Select-Object Install, SP |
+        Where-Object {$_.Install -band 1}
+    if ($V20Key)
+    {
+        if ($V20Key.SP)
+        {
+            $DisplayVersions += "2.0.$($V20Key.SP)"
+        }
+        else
+        {
+            $DisplayVersions += "2.0"
+        }
+    }
+
+
+    if ($PSCmdlet.ParameterSetName -eq 'AsVersion')
+    {
+        $DisplayVersions | ForEach-Object {[version]$_}
+    }
+    else
+    {
+        $DisplayVersions
+    }
 }
