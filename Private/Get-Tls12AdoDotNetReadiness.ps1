@@ -31,7 +31,7 @@
 
         [Parameter(Position = 1)]
         [ValidateScript( {$_.__CLASS -eq 'Win32_QuickFixEngineering'})]
-        [System.Management.ManagementObject]$Hotfixes = (Get-WmiObject Win32_QuickFixEngineering)
+        [System.Management.ManagementObject[]]$Hotfixes = (Get-WmiObject Win32_QuickFixEngineering)
     )
 
     begin
@@ -44,12 +44,25 @@
         $Output = New-Object PSObject -Property @{
             SupportsTls12   = $false
             RequiredUpdates = @()
+            DotNetVersion   = $null
         }
 
         $OSVersion = [version]$OperatingSystem.Version
         $DotNetVersion = $InstalledDotNetVersion |
-            Sort-Object Version |
-            Select-Object -ExpandProperty Version -Last 1
+            Select-Object -First 1
+
+
+        if ($DotNetVersion)
+        {
+            $Output.DotNetVersion = $DotNetVersion
+        }
+        else
+        {
+            $Output.SupportsTls12 = $true
+            Write-Warning "No .NET Framework version detected. This is unusual. Please manually verify whether any version of the .NET Framework is installed and, if so, report a bug."
+            return $Output
+        }
+
 
         switch ($DotNetVersion)
         {
