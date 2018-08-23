@@ -1,111 +1,108 @@
 function Get-DotNetVersion {
     <#
         .SYNOPSIS
-        Returns all the installed versions of .NET
+        Returns all installed versions of the .NET Framework.
 
         .DESCRIPTION
-        Full description: Returns all the installed versions of .NET
-        WHAM - supported: Yes
-        WHAM - keywords: .NET,Version,framework
-        WHAM - Prerequisites: No
-        WHAM - Makes changes: No
-        WHAM - Column Header: DotNetVersion
-        WHAM - Script time out (min): 1
-        WHAM - Isolate: Yes
+        Returns all installed versions of the .NET Framework.
 
         .EXAMPLE
-        Full command: Get-DotNetVersion
+        Get-DotNetVersion
+
+        Returns all installed versions of the .NET Framework.
 
         .OUTPUTS
-        DisplayVersion Version        Release
-        ---            -------        -------
-        v2.0.50727     2.0.50727.4927
-        v3.0           3.0.30729.4926
-        v3.5           3.5.30729.4926
-        v4.5.2         4.5.2          379893
-        v4.5.2         4.5.2          379893
-        v4.0           4.0.0.0
+        [psobject[]]
 
         .LINK
         https://docs.microsoft.com/en-us/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed
 
-        .NOTES
-        Last Updated: 27-JUL-2017
-        Minimum OS: 2008 R2
-        Minimum PoSh: 2.0
+        .LINK
+        https://support.microsoft.com/en-gb/help/318785/how-to-determine-which-versions-and-service-pack-levels-of-the-microso
 
-        Version Table:
-        Version :: Author          :: Live Date   :: JIRA     :: QC             :: Description
-        -----------------------------------------------------------------------------------------------------------
-        1.1     :: Freddie Sackur  :: 27-JUL-2017 :: IAWW-1532::  :: Release
-        1.0     :: Chester Beckett :: 22-MAR-2016 :: IAWW-000 :: Freddie Sackur :: Release
+        .LINK
+        https://blogs.msdn.microsoft.com/astebner/2005/07/12/what-net-framework-version-numbers-go-with-what-service-pack/
     #>
+    [CmdletBinding()]
+    [OutputType([psobject[]])]
+    param ()
 
-    try {
-        #Ref: https://docs.microsoft.com/en-us/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed
-        $dotNet4Builds = @{
-            378389 = 'v4.5'
-            378675 = 'v4.5.1'
-            378758 = 'v4.5.1'
-            379893 = 'v4.5.2'
-            393295 = 'v4.6'
-            393297 = 'v4.6'
-            394254 = 'v4.6.1'
-            394271 = 'v4.6.1'
-            394802 = 'v4.6.2'
-            394806 = 'v4.6.2'
-            460798 = 'v4.7'
-            460805 = 'v4.7'
-            461308 = 'v4.7.1'
-            461310 = 'v4.7.1'
-            461808 = 'v4.7.2'
-            461814 = 'v4.7.2'
+    $Rev45DisplayVersion = '"Revision","DisplayVersion"
+        "461814","4.7.2"
+        "461808","4.7.2"
+        "461310","4.7.1"
+        "461308","4.7.1"
+        "460805","4.7"
+        "460798","4.7"
+        "394806","4.6.2"
+        "394802","4.6.2"
+        "394271","4.6.1"
+        "394254","4.6.1"
+        "393297","4.6"
+        "393295","4.6"
+        "379893","4.5.2"
+        "378758","4.5.1"
+        "378675","4.5.1"
+        "378389","4.5"
+    ' | ConvertFrom-Csv
+
+    $VersionToDisplayVersion = '"Version","DisplayVersion"
+        "4.0.30319.1","4.0"
+        "3.5.30729.1","3.5 SP1"
+        "3.5.21022.8","3.5"
+        "3.0.04506.2152","3.0 SP2"
+        "3.0.04506.648","3.0 SP1"
+        "3.0.04506.26","3.0"
+        "2.0.50727.3053","2.0 SP2"
+        "2.0.50727.1433","2.0 SP1"
+        "2.0.50727.42","2.0"
+        "2.0.50215.44","2.0 Beta 2"
+        "2.0.40607.16","2.0 Beta 1"
+        "1.1.4322.2300","1.1 SP1"
+        "1.1.4322.2032","1.1 SP1"
+        "1.1.4322.573","1.1"
+        "1.0.3705.6018","1.0 SP3"
+        "1.0.3705.288","1.0 SP2"
+        "1.0.3705.209","1.0 SP1"
+        "1.0.3705.0","1.0"
+    ' | ConvertFrom-Csv
+
+    $RegKeyPath = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP'
+    $KeyPattern = "^" + [regex]::Escape($RegKeyPath) + "\\(" + ("v4\\(Client|Full)$", "v[2-3].\d(\.\d+)?$" -join "|") + ")"
+    $RegKeys    = Get-RegKey $RegKeyPath -Recurse |
+        Where-Object {$_.Key -match $KeyPattern} |
+        Select-Object Version, Release -Unique
+
+
+    $DotNetVersions = New-Object System.Collections.ArrayList
+
+    foreach ($RegKey in $RegKeys)
+    {
+        if ($RegKey.Release)
+        {
+            $Version = [version]($RegKey.Version, $RegKey.Release -join '.')
+        }
+        else
+        {
+            $Version = [version]$RegKey.Version
         }
 
-        $RegKey = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP'
-
-        $RawVersions = Get-ChildItem $RegKey -ErrorAction Stop |
-                #Get the first level children (not all versions of GCI have the -Depth parameter)
-                Get-ChildItem |
-                Get-ItemProperty -name Version, Release -ErrorAction SilentlyContinue |
-                Select Version, Release, @{Name='DisplayVersion'; Expression={Split-Path $_.PSParentPath -Leaf}}
-
-        $CorrectVersions = $RawVersions | foreach {
-            #v4.5 and above now uses the Release property to indicate installed version
-            if ($_.Release) {
-                $RealDisplayVersion = $dotNet4Builds[([int]$_.Release)]
-                if ($null -eq $RealDisplayVersion) {$RealDisplayVersion = 'Unknown'}
-                $_.DisplayVersion = $RealDisplayVersion
-
-                $_.Version = $RealDisplayVersion -replace '[^\d\.]'  #Just the digits and full stops
-            }
-
-            #Convert version property to version object - any caller that uses this probably needs a version
-            try {
-                $_.Version = [version]$_.Version
-            } catch {
-                $_.Version = $null
-            }
-
-            return $_
+        if ($Version -ge [version]"4.1")
+        {
+            $DisplayVersion = $Rev45DisplayVersion | Where-Object {$Version.Revision -ge $_.Revision} | Select-Object -ExpandProperty DisplayVersion -First 1
+            #$dotNet4Builds.GetEnumerator() | Where-Object {$Version.Revision -ge $_.Name} | Select-Object -ExpandProperty Value -Last 1
+        }
+        else
+        {
+            $DisplayVersion = $VersionToDisplayVersion | Where-Object {$Version -ge [version]$_.Version} | Select-Object -ExpandProperty DisplayVersion -First 1
         }
 
-        return $CorrectVersions |
-            select DisplayVersion, Version, Release, @{Name='Server'; Expression={$env:COMPUTERNAME}}
-
-
-    } catch {
-        $ErrorMsg = "Exception {0} at line {1}: {2}" -f (
-            $_.Exception.GetType().Name,
-            $LineNumber,
-            $_.InvocationInfo.Line
-        )
-
-        return New-Object psobject -Property @{
-            Server = $env:COMPUTERNAME
-            DisplayVersion = $ErrorMsg
-            Version = $null
-            Release = $null
+        $DotNetVersion = New-Object psobject -Property @{
+            Version = $Version
+            DisplayVersion = $DisplayVersion
         }
+        $null = $DotNetVersions.Add($DotNetVersion)
     }
+
+    $DotNetVersions | Sort-Object Version -Descending
 }
