@@ -1,4 +1,4 @@
-function Get-CommVaultVersion
+function Get-CommvaultVersion
 {
     <#
         .Synopsis
