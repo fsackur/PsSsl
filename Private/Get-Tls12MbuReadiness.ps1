@@ -35,14 +35,16 @@
             CommvaultVersion = $CommvaultVersion
         }
 
-        $Output.SupportsTls = (
+        $Output.SupportsTls12 = (
             ($null -eq $CommVaultVersion) -or
             ($CommVaultVersion -ge [version]"10.0.116.19243")
         )
 
-        if (-not $Output.SupportsTls) {
+        if (-not $Output.SupportsTls12) {
             $Report.RequiredUpdates += "Request MBU team to push Commvault 10 SP14 or above"
         }
+
+        return $Output
     }
 
     end
