@@ -9,6 +9,9 @@
 
         If updates are required, they will be reported in the output.
 
+        .PARAMETER InstalledSqlFeatures
+        To avoid a duplicate function call, provide all instances of installed SQL features.
+
         .OUTPUTS
         [psobject]
 
@@ -32,29 +35,29 @@
     {
         $Output = New-ReadinessSpecObject -NoteProperty InstalledDbEngineFeatures, Instances
 
-        $Output.InstalledDbEngineFeatures = $InstalledDbEngineFeatures = $InstalledSqlFeatures |
+        $Output.InstalledDbEngineFeatures = $InstalledSqlFeatures |
             Where-Object {$_.DisplayName -match 'Database Engine'} |
-            Select-Object * -Unique
+            Sort-Object * -Unique
 
         $Output.Instances = @()
 
         # Bail early if no relevant features
-        if (-not $InstalledDbEngineFeatures)
+        if (-not $Output.InstalledDbEngineFeatures)
         {
             $Output.SupportsTls12 = $true
             return $Output
         }
 
-        $DbEngineServices = Get-WmiObject Win32_Service -Filter "PathName LIKE '%sqlservr.exe%'" |
-            Select-Object (
-                @{Name='Instance'; Expression={$_.DisplayName -replace '.*\(' -replace '\)'}},
-                'PathName'
-            )
+        $WmiDbEngineServices = Get-WmiObject -Query "SELECT DisplayName, PathName FROM Win32_Service WHERE PathName LIKE '%sqlservr.exe%'"
+        $DbEngineServices    = $WmiDbEngineServices | Select-Object (
+            @{Name = 'InstanceName'; Expression = {$_.DisplayName -replace '.*\(' -replace '\)'}},
+            'PathName'
+        )
 
         foreach ($Service in $DbEngineServices)
         {
-            $Instance = New-ReadinessSpecObject -NoteProperty Name, Version
-            $Instance.Name = $Service.Instance
+            $Instance      = New-ReadinessSpecObject -NoteProperty Name, Version
+            $Instance.Name = $Service.InstanceName
 
             #Strip out the CLI switches from the WMI Service PathName property
             if ($Service.PathName -match '^"(?<Path>.*?)"')
@@ -63,18 +66,19 @@
             }
             else
             {
-                #If the path is unquoted, then it contains no whitespace, and anything after a whitespace is an argument
+                #If the path is unquoted, then it contains no whitespace, and anything after a whitespace must be an argument
                 $Path = $Service.PathName -replace '\s.*'
             }
 
             # Get the SQL version from the service binary
             $Instance.Version = [version](Get-Item $Path).VersionInfo.ProductVersion
-            $Updates = Get-SqlTlsUpdatesRequired -Version $Instance.Version
+            $RequiredUpdates  = Get-SqlTlsUpdatesRequired -Version $Instance.Version
 
-            if ($Updates)
+
+            if ($RequiredUpdates)
             {
-                $Instance.SupportsTls12 = $false
-                $Instance.RequiredUpdates += $Updates
+                $Instance.SupportsTls12    = $false
+                $Instance.RequiredUpdates += $RequiredUpdates
             }
             else
             {
@@ -84,8 +88,10 @@
             $Output.Instances += $Instance
         }
 
-        $Output.SupportsTls12 = $null -eq ($Output.Instances | Where-Object {-not $_.SupportsTls12})
+
+        $Output.SupportsTls12   = $null -eq ($Output.Instances | Where-Object {-not $_.SupportsTls12})
         $Output.RequiredUpdates = $Output.Instances | Select-Object -ExpandProperty RequiredUpdates -Unique
+
         Write-Output $Output
     }
 
