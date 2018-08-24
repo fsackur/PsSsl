@@ -114,7 +114,7 @@ function Get-Tls12Readiness
         }
 
         $Output.SupportsTls12   = $Output.SupportsTls12 -and $FeaturesSupportTls12
-        $Output.RequiredUpdates = $RequiredUpdates
+        $Output.RequiredUpdates = $RequiredUpdates | Where-Object {$_}
     }
 
     end
