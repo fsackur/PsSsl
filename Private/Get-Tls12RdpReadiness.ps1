@@ -27,7 +27,7 @@
     (
         [Parameter(Position = 0)]
         [ValidateScript({$_.__CLASS -eq 'Win32_OperatingSystem'})]
-        [System.Management.ManagementObject[]]$OperatingSystem = (Get-WmiObject Win32_OperatingSystem),
+        [System.Management.ManagementObject]$OperatingSystem = (Get-WmiObject Win32_OperatingSystem),
 
         [Parameter(Position = 1)]
         [ValidateScript( {$_.__CLASS -eq 'Win32_QuickFixEngineering'})]
@@ -47,14 +47,14 @@
         switch ($Version)
         {
             # 2012 RTM and above
-            {$_ -ge 6.2}
+            {$_ -ge [version]"6.2"}
             {
                 $Output.SupportsTls12 = $true
                 break
             }
 
             # 2008 R2
-            {$_ -ge 6.1}
+            {$_ -ge [version]"6.1"}
             {
                 $KB3080079 = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB3080079'}
                 if ($KB3080079)
