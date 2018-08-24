@@ -1,27 +1,27 @@
-function Get-SqlTlsUpdatesRequired
+function Get-Tls12DbEngineRequiredUpdates
 {
     <#
-        .Synopsis
+        .SYNOPSIS
         Given a SQL version, returns the updates that must be applied before disabling TLS 1.0
 
-        .Description
+        .DESCRIPTION
         This is just a big switch statement based on the info at https://sqlserverbuilds.blogspot.co.uk/
 
         Output is an array of strings; one per update
 
         Strings are human readable, and tell you what to install and what URL to download it from
 
-        .Parameter Version
+        .PARAMETER Version
         SQL version to check
 
-        .Example
-        Get-SqlTlsUpdatesRequired 10.50.0.4000
+        .EXAMPLE
+        Get-Tls12DbEngineRequiredUpdates 10.50.0.4000
 
         Apply SP3 from http://www.microsoft.com/en-us/download/details.aspx?id=44271
         Apply TLS hotfix from https://support.microsoft.com/en-us/hotfix/kbhotfix?kbnum=3144113&kbln=en-us
         Apply intermittent service termination hotfix from https://support.microsoft.com/en-us/kb/3146034
 
-        .Link
+        .LINK
         https://sqlserverbuilds.blogspot.co.uk/
     #>
     [CmdletBinding()]
@@ -87,7 +87,7 @@ function Get-SqlTlsUpdatesRequired
                 break
             }
 
-        #2016
+        #2016 and up
         {$_.Major -ge 13}
             {
                 break

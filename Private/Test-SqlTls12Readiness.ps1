@@ -119,7 +119,7 @@ function Test-SqlTls12Readiness
 
             $Instance.PathName = $Path
             $Version = [version](Get-Item $Path).VersionInfo.ProductVersion
-            $Updates = Get-SqlTlsUpdatesRequired -Version $Version
+            $Updates = Get-Tls12DbEngineRequiredUpdates -Version $Version
 
             $Instance | Add-Member -MemberType NoteProperty -Name Version -Value $Version
             $Instance | Add-Member -MemberType NoteProperty -Name RequiredUpdates -Value $Updates

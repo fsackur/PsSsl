@@ -72,7 +72,7 @@
 
             # Get the SQL version from the service binary
             $Instance.Version = [version](Get-Item $Path).VersionInfo.ProductVersion
-            $RequiredUpdates  = Get-SqlTlsUpdatesRequired -Version $Instance.Version
+            $RequiredUpdates  = Get-Tls12DbEngineRequiredUpdates -Version $Instance.Version
 
 
             if ($RequiredUpdates)
