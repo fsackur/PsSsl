@@ -46,13 +46,31 @@
         $Version = [version]$OperatingSystem.version
         switch ($Version)
         {
+            # 2012 RTM and above
             {$_ -ge 6.2}
             {
                 $Output.SupportsTls12 = $true
                 break
             }
 
-            {$_ -lt 6.1}
+            # 2008 R2
+            {$_ -ge 6.1}
+            {
+                $KB3080079 = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB3080079'}
+                if ($KB3080079)
+                {
+                    $Output.SupportsTls12 = $true
+                }
+                else
+                {
+                    $Output.SupportsTls12 = $false
+                    $Output.UpdatesRequired += "Install KB3080079 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB3080079"
+                }
+                break
+            }
+
+            # 2008 RTM
+            default
             {
                 if ((Get-RdpSecurityLayer) -eq 'Rdp')
                 {
@@ -67,20 +85,6 @@
                     )
                 }
                 break
-            }
-
-            default
-            {
-                $KB3080079 = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB3080079'}
-                if ($KB3080079)
-                {
-                    $Output.SupportsTls12 = $true
-                }
-                else
-                {
-                    $Output.SupportsTls12 = $false
-                    $Output.UpdatesRequired += "Install KB3080079 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB3080079"
-                }
             }
         }
 

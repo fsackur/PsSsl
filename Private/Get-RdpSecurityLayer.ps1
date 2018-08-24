@@ -12,6 +12,11 @@ function Get-RdpSecurityLayer
 
     Returns 'Rdp', 'Negotiate', or 'Tls'.
 
+    .EXAMPLE
+    Get-RdpSecurityLayer
+
+    Gets the RDP security layer.
+
     .LINK
     https://docs.microsoft.com/en-us/windows/desktop/termserv/win32-tsgeneralsetting
     #>
@@ -20,6 +25,7 @@ function Get-RdpSecurityLayer
     param ()
 
     $WmiObject = Get-WmiObject -Namespace "ROOT\CIMV2\TerminalServices" -Query "SELECT SecurityLayer FROM Win32_TSGeneralSetting"
+
     switch ($WmiObject.SecurityLayer)
     {
         0       {return 'Rdp'}

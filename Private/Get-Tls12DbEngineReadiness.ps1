@@ -21,7 +21,8 @@
     #>
     [CmdletBinding()]
     [OutputType([psobject])]
-    param (
+    param
+    (
         [Parameter(Position = 0)]
         [psobject[]]$InstalledSqlFeatures = (Software\Get-InstalledSoftware | Where-Object {$_.DisplayName -match 'SQL'})
     )

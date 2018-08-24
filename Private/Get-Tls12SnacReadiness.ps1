@@ -42,7 +42,8 @@
             Select-Object -Last 1
 
 
-        switch ($Output.InstalledSqlNativeClient.Version) {
+        switch ($Output.InstalledSqlNativeClient.Version)
+        {
             #2012, 2014 (all SNAC versions from 2012 are called 2012 / v11)
             {$_.Major -eq 11 -and $_.Build -lt 6538}
             {
