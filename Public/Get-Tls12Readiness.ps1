@@ -86,12 +86,12 @@ function Get-Tls12Readiness
 
         if ([version]$WmiOS.Version -lt [version]"6.1" -and -not $KB4019276)
         {
-            $Output.SupportsTls12 = $false
+            $OSSupportsTls12 = $false
             $RequiredUpdates += "Install KB4019276 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB4019276"
         }
         else
         {
-            $Output.SupportsTls12 = $true
+            $OSSupportsTls12 = $true   # so far. Can still be set to false.
         }
 
         $Output.ClientTls12Enabled  = (Get-SchannelProtocol 'Tls12Client').Enabled
@@ -112,14 +112,15 @@ function Get-Tls12Readiness
             $RequiredUpdates += $Output.$Property.RequiredUpdates
         }
 
-        $Output.SupportsTls12   = $Output.SupportsTls12 -and $FeaturesSupportTls12 -and $Output.ClientTls12Enabled
-        $Output.RequiredUpdates = $RequiredUpdates | Where-Object {$_}
+        $Output.SupportsTls12   = $OsSupportsTls12 -and $FeaturesSupportTls12 -and $Output.ClientTls12Enabled
+        $Output.RequiredUpdates = $RequiredUpdates | Where-Object {$_}  # Filter out nulls
+
+
+        Write-Output $Output
     }
 
     end
     {
-        Write-Output $Output
-
         Write-Verbose "[$(Get-Date)] End   :: $($MyInvocation.MyCommand)"
     }
 }
