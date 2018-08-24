@@ -34,7 +34,7 @@
 
     process
     {
-        $Output = New-ReadinessSpecObject -NoteProperty InstalledOdbcDriver
+        $Output = New-ReadinessSpecObject -Property InstalledOdbcDriver
 
         $Output.InstalledOdbcDriver = $InstalledSqlFeatures |
             Where-Object {$_.DisplayName -match 'ODBC'} |

@@ -34,7 +34,7 @@
 
     process
     {
-        $Output = New-ReadinessSpecObject -NoteProperty InstalledSqlNativeClient
+        $Output = New-ReadinessSpecObject -Property InstalledSqlNativeClient
 
         $Output.InstalledSqlNativeClient = $InstalledSqlFeatures |
             Where-Object {$_.DisplayName -match 'Native Client'} |

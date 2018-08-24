@@ -71,7 +71,7 @@ function Get-Tls12Readiness
 
     process
     {
-        $Output                 = New-ReadinessSpecObject -NoteProperty $OutputProperties
+        $Output                 = New-ReadinessSpecObject -Property $OutputProperties
 
         $WmiOS                  = Get-WmiObject Win32_OperatingSystem
         $Hotfixes               = (Get-WmiObject Win32_QuickFixEngineering)

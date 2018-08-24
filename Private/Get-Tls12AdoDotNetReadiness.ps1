@@ -41,7 +41,7 @@
 
     process
     {
-        $Output = New-ReadinessSpecObject -NoteProperty 'DotNetVersion'
+        $Output = New-ReadinessSpecObject -Property 'DotNetVersion'
 
         $OSVersion = [version]$OperatingSystem.Version
         $DotNetVersion = $InstalledDotNetVersion |

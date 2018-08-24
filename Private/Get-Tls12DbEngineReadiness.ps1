@@ -34,7 +34,7 @@
 
     process
     {
-        $Output = New-ReadinessSpecObject -NoteProperty InstalledDbEngineFeatures, Instances
+        $Output = New-ReadinessSpecObject -Property InstalledDbEngineFeatures, Instances
 
         $Output.InstalledDbEngineFeatures = $InstalledSqlFeatures |
             Where-Object {$_.DisplayName -match 'Database Engine'} |
@@ -57,7 +57,7 @@
 
         foreach ($Service in $DbEngineServices)
         {
-            $Instance      = New-ReadinessSpecObject -NoteProperty Name, Version
+            $Instance      = New-ReadinessSpecObject -Property Name, Version
             $Instance.Name = $Service.InstanceName
 
             #Strip out the CLI switches from the WMI Service PathName property
