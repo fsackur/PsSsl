@@ -58,7 +58,6 @@ function Get-Tls12Readiness
             'RequiredUpdates',
             'OS',
             'WikiLink',
-            'ClientTls11Enabled',
             'ClientTls12Enabled',
             'RdpReadiness',
             'AdoDotNetReadiness',
