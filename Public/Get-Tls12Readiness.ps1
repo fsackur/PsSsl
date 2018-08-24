@@ -1,5 +1,54 @@
 function Get-Tls12Readiness
 {
+    <#
+    .SYNOPSIS
+    Reports on the readiness for TLS 1.2 to be enforced on a system.
+
+    .DESCRIPTION
+    Provides a report for a single machine on the supportability of TLS 1.2. You can use this report
+    to prepare for disabling SSL and TLS protocols below TLS 1.1.
+
+    This command provides a list of all updates or changes that are required before a typical Windows
+    stack of IIS / .NET / MS SQL Server can safely have TLS 1.0 disabled.
+
+    .OUTPUTS
+    [string]
+
+    Returns 'Rdp', 'Negotiate', or 'Tls'.
+
+    .EXAMPLE
+    Get-Tls12Readiness
+
+    Reports on the readiness for TLS 1.2 to be enforced on a system.
+
+    .NOTES
+    Do not run this script in isolation. You should run this report on all the servers in an application
+    stack. For example, this report may indicate that the database server is ready for TLS 1.2 to be
+    enforced, but if the web servers do not support TLS 1.2 on the client side, the application will be
+    brought down. It is the application owner's responsibility to advise which servers may be affected.
+
+    It is possible that the application stack pins certain versions. For example:
+
+    - .NET apps hosted in IIS may be targeting an earlier .NET version that the latest version installed
+    - Database clients may be using a driver older than the latest version installed
+
+    This report cannot assess these risks. It is the application owner's responsibility to plan for these
+    risks.
+
+    It is possible that the application has external clients that require TLS 1.0. This report cannot
+    assess this risk. It is the application owner's responsibility to plan for this risk.
+
+    Changes to enabled TLS protocols should be done in an outage window; all changed servers should be
+    rebooted; the application should be tested. At a minimum, the testing plan should include:
+
+    - Connecting to SQL through SQL Server Management Studio
+    - Loading the application and performing an action that queries the database
+
+    Relevant events are often flagged in the Application log from source SCHANNEL.
+
+    .LINK
+    https://rax.io/Win-Disabling-TLS
+    #>
     begin
     {
         Write-Verbose "[$(Get-Date)] Begin :: $($MyInvocation.MyCommand)"
