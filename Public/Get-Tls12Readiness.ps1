@@ -94,7 +94,7 @@ function Get-Tls12Readiness
             $Output.SupportsTls12 = $true
         }
 
-
+        $Output.ClientTls12Enabled  = (Get-SchannelProtocol 'Tls12Client').Enabled
         $Output.RdpReadiness        = Get-Tls12RdpReadiness -OperatingSystem $WmiOS -Hotfixes $Hotfixes
         $Output.AdoDotNetReadiness  = Get-Tls12AdoDotNetReadiness -Hotfixes $Hotfixes
         $Output.DbEngineReadiness   = Get-Tls12DbEngineReadiness -InstalledSqlFeatures $InstalledSqlFeatures
@@ -112,7 +112,7 @@ function Get-Tls12Readiness
             $RequiredUpdates += $Output.$Property.RequiredUpdates
         }
 
-        $Output.SupportsTls12   = $Output.SupportsTls12 -and $FeaturesSupportTls12
+        $Output.SupportsTls12   = $Output.SupportsTls12 -and $FeaturesSupportTls12 -and $Output.ClientTls12Enabled
         $Output.RequiredUpdates = $RequiredUpdates | Where-Object {$_}
     }
 
