@@ -27,11 +27,11 @@
     (
         [Parameter(Position = 0)]
         [ValidateScript({$_.__CLASS -eq 'Win32_OperatingSystem'})]
-        [System.Management.ManagementObject]$OperatingSystem = (Get-WmiObject Win32_OperatingSystem),
+        [System.Management.ManagementObject[]]$OperatingSystem = (Get-WmiObject Win32_OperatingSystem),
 
         [Parameter(Position = 1)]
         [ValidateScript( {$_.__CLASS -eq 'Win32_QuickFixEngineering'})]
-        [System.Management.ManagementObject]$Hotfixes = (Get-WmiObject Win32_QuickFixEngineering)
+        [System.Management.ManagementObject[]]$Hotfixes = (Get-WmiObject Win32_QuickFixEngineering)
     )
 
     begin
