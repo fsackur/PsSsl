@@ -9,6 +9,9 @@
 
         If updates are required, they will be reported in the output.
 
+        .PARAMETER InstalledSqlFeatures
+        To avoid a duplicate function call, provide all instances of installed SQL features.
+
         .OUTPUTS
         [psobject]
 
@@ -18,7 +21,11 @@
     #>
     [CmdletBinding()]
     [OutputType([psobject])]
-    param ()
+    param
+    (
+        [Parameter(Position = 0)]
+        [psobject[]]$InstalledSqlFeatures = (Software\Get-InstalledSoftware | Where-Object {$_.DisplayName -match 'SQL'})
+    )
 
     begin
     {
@@ -27,7 +34,23 @@
 
     process
     {
-        $Output = New-ReadinessSpecObject
+        $Output = New-ReadinessSpecObject -NoteProperty InstalledOdbcDriver
+
+        $Output.InstalledOdbcDriver = $InstalledSqlFeatures |
+            Where-Object {$_.DisplayName -match 'ODBC'} |
+            Sort-Object Version |
+            Select-Object -Last 1
+
+        if ($Output.InstalledOdbcDriver.Version -lt [version]"12.0.4219")
+        {
+            $Output.RequiredUpdates += 'Update SQL ODBC driver from https://www.microsoft.com/en-us/download/details.aspx?id=36434'
+        }
+        else
+        {
+            $Output.SupportsTls12 = $true
+        }
+
+        return $Output
     }
 
     end
