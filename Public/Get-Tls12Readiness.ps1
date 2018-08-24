@@ -22,17 +22,19 @@ function Get-Tls12Readiness
 
     process
     {
-        $Output          = New-ReadinessSpecObject -NoteProperty $OutputProperties
+        $Output                 = New-ReadinessSpecObject -NoteProperty $OutputProperties
 
-        $WmiOS           = Get-WmiObject Win32_OperatingSystem
-        $Hotfixes        = (Get-WmiObject Win32_QuickFixEngineering)
+        $WmiOS                  = Get-WmiObject Win32_OperatingSystem
+        $Hotfixes               = (Get-WmiObject Win32_QuickFixEngineering)
+        $InstalledSoftware      = Software\Get-InstalledSoftware
+        $InstalledSqlFeatures   = $InstalledSoftware | Where-Object {$_.DisplayName -match 'SQL'}
 
-        $RequiredUpdates = @()
-        $Output.OS       = $WmiOS.Caption
-        $Output.WikiLink = 'https://rax.io/Win-Disabling-TLS'
+        $RequiredUpdates        = @()
+        $Output.OS              = $WmiOS.Caption
+        $Output.WikiLink        = 'https://rax.io/Win-Disabling-TLS'
 
 
-        $KB4019276       = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB4019276'}
+        $KB4019276              = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB4019276'}
 
         if ([version]$WmiOS.Version -lt [version]"6.1" -and -not $KB4019276)
         {
@@ -47,10 +49,10 @@ function Get-Tls12Readiness
 
         $Output.RdpReadiness        = Get-Tls12RdpReadiness -OperatingSystem $WmiOS -Hotfixes $Hotfixes
         $Output.AdoDotNetReadiness  = Get-Tls12AdoDotNetReadiness -Hotfixes $Hotfixes
-        $Output.DbEngineReadiness   = Get-Tls12DbEngineReadiness
+        $Output.DbEngineReadiness   = Get-Tls12DbEngineReadiness -InstalledSqlFeatures $InstalledSqlFeatures
         $Output.MbuReadiness        = Get-Tls12MbuReadiness
-        $Output.OdbcReadiness       = Get-Tls12OdbcReadiness
-        $Output.SnacReadiness       = Get-Tls12SnacReadiness
+        $Output.OdbcReadiness       = Get-Tls12OdbcReadiness -InstalledSqlFeatures $InstalledSqlFeatures
+        $Output.SnacReadiness       = Get-Tls12SnacReadiness -InstalledSqlFeatures $InstalledSqlFeatures
 
 
         $FeaturesSupportTls12 = $true
