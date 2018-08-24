@@ -33,6 +33,17 @@ function Get-DotNetVersion {
 
         Returns all installed versions of the .NET Framework from 2.0 up.
 
+        .EXAMPLE
+        Get-DotNetVersion -AsString
+
+        4.7.1
+        4.0
+        3.5.1
+        3.0.2
+        2.0.2
+
+        Returns all installed versions of the .NET Framework from 2.0 up, as a collection of strings.
+
         .LINK
         https://support.microsoft.com/en-gb/help/318785/how-to-determine-which-versions-and-service-pack-levels-of-the-microso
     #>
