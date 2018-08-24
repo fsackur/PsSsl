@@ -41,11 +41,7 @@
 
     process
     {
-        $Output = New-Object PSObject -Property @{
-            SupportsTls12   = $false
-            RequiredUpdates = @()
-            DotNetVersion   = $null
-        }
+        $Output = New-ReadinessSpecObject -NoteProperty 'DotNetVersion'
 
         $OSVersion = [version]$OperatingSystem.Version
         $DotNetVersion = $InstalledDotNetVersion |

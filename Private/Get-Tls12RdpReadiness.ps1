@@ -41,10 +41,7 @@
 
     process
     {
-        $Output = New-Object PSObject -Property @{
-            SupportsTls12   = $false
-            RequiredUpdates = @()
-        }
+        $Output = New-ReadinessSpecObject
 
         $Version = [version]$OperatingSystem.version
         switch ($Version)

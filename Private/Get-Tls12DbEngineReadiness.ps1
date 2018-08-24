@@ -27,10 +27,7 @@
 
     process
     {
-        $Output = New-Object PSObject -Property @{
-            SupportsTls12   = $false
-            RequiredUpdates = @()
-        }
+        $Output = New-ReadinessSpecObject
     }
 
     end
@@ -38,4 +35,3 @@
         Write-Verbose "[$(Get-Date)] End   :: $($MyInvocation.MyCommand)"
     }
 }
-

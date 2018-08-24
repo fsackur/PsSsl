@@ -22,11 +22,7 @@ function Get-Tls12Readiness
 
     process
     {
-        $Output = New-Object PSObject
-        foreach ($Property in $OutputProperties)
-        {
-            Add-Member -InputObject $Output NoteProperty -Name $Property -Value $null
-        }
+        $Output          = New-ReadinessSpecObject -NoteProperty $OutputProperties
 
         $WmiOS           = Get-WmiObject Win32_OperatingSystem
         $Hotfixes        = (Get-WmiObject Win32_QuickFixEngineering)

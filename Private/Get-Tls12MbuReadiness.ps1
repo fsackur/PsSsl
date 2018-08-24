@@ -27,17 +27,12 @@
 
     process
     {
-        $CommvaultVersion = Get-CommvaultVersion
-
-        $Output = New-Object PSObject -Property @{
-            SupportsTls12    = $false
-            RequiredUpdates  = @()
-            CommvaultVersion = $CommvaultVersion
-        }
+        $Output = New-ReadinessSpecObject -NoteProperty 'CommvaultVersion'
+        $Output.CommvaultVersion = $CommvaultVersion = Get-CommvaultVersion
 
         $Output.SupportsTls12 = (
-            ($null -eq $CommVaultVersion) -or
-            ($CommVaultVersion -ge [version]"10.0.116.19243")
+            ($null -eq $CommvaultVersion) -or
+            ($CommvaultVersion -ge [version]"10.0.116.19243")
         )
 
         if (-not $Output.SupportsTls12) {
