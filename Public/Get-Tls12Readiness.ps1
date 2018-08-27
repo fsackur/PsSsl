@@ -94,7 +94,7 @@ function Get-Tls12Readiness
             $OSSupportsTls12 = $true   # so far. Can still be set to false.
         }
 
-        $Output.ClientTls12Enabled  = (Get-SchannelProtocol 'Tls12Client').Enabled
+        $Output.ClientTls12Enabled  = (Get-TlsProtocol 'TLS 1.2 Client').Enabled
         $Output.RdpReadiness        = Get-Tls12RdpReadiness -OperatingSystem $WmiOS -Hotfixes $Hotfixes
         $Output.AdoDotNetReadiness  = Get-Tls12AdoDotNetReadiness -Hotfixes $Hotfixes
         $Output.DbEngineReadiness   = Get-Tls12DbEngineReadiness -InstalledSqlFeatures $InstalledSqlFeatures
