@@ -1,14 +1,14 @@
-function New-TlsProtocolObject
+function Get-TlsProtocol
 {
     <#
         .SYNOPSIS
-        Creates an object representing a version of a TLS protocol.
+        Gets a version of a TLS protocol.
 
         .DESCRIPTION
-        Creates an object representing a version of a TLS protocol.
+        Gets a version of a TLS protocol.
 
         .PARAMETER Protocol
-        Specify the SSL / TLS protocol.
+        Specify the SSL / TLS / DTLS protocol.
 
         .PARAMETER OSVersion
         To avoid a duplicate WMI call, provide the semantic version of the operating system.
@@ -17,7 +17,7 @@ function New-TlsProtocolObject
         [psobject]
 
         .EXAMPLE
-        New-TlsProtocolObject 'TLS 1.2 Client'
+        Get-TlsProtocol 'TLS 1.2 Client'
 
         Protocol       IsEnabled OsDefaultIsEnabled
         --------       --------- ------------------
