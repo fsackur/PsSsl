@@ -66,7 +66,7 @@ function New-ReadinessSpecObject
         }
         elseif ($this.RequiredActions)
         {
-            "Required updates: $($this.RequiredActions.Count)"
+            "Required actions: $($this.RequiredActions.Count)"
         }
         else
         {
