@@ -18,17 +18,17 @@ function Get-Tls12Readiness
     Get-Tls12Readiness
 
     SupportsTls12      : False
-    RequiredUpdates    : {Install KB3106994 from https://support.microsoft.com/en-us/help/3106994, Apply SP3 from http://www.microsoft.com/en-us/download/details.aspx?id=44271, Apply TLS hotfix from https://support.microsoft.com/en-us/hot
+    RequiredActions    : {Install KB3106994 from https://support.microsoft.com/en-us/help/3106994, Apply SP3 from http://www.microsoft.com/en-us/download/details.aspx?id=44271, Apply TLS hotfix from https://support.microsoft.com/en-us/hot
                          fix/kbhotfix?kbnum=3144114&kbln=en-us, Apply intermittent service termination hotfix from https://support.microsoft.com/en-us/kb/3146034...}
     OS                 : Microsoft Windows Server 2008 R2 Standard
     WikiLink           : https://rax.io/Win-Disabling-TLS
     ClientTls12Enabled : True
     RdpReadiness       : Ready
-    AdoDotNetReadiness : Required updates: 1
-    DbEngineReadiness  : Required updates: 3
+    AdoDotNetReadiness : Required actions: 1
+    DbEngineReadiness  : Required actions: 3
     MbuReadiness       : Ready
-    OdbcReadiness      : Required updates: 1
-    SnacReadiness      : Required updates: 1
+    OdbcReadiness      : Required actions: 1
+    SnacReadiness      : Required actions: 1
 
     Reports on the readiness for TLS 1.2 to be enforced on a system.
 
@@ -83,6 +83,7 @@ function Get-Tls12Readiness
     {
         $Output                 = New-ReadinessSpecObject -Property $OutputProperties
 
+        # We pass these to each function
         $WmiOS                  = Get-WmiObject Win32_OperatingSystem
         $Hotfixes               = (Get-WmiObject Win32_QuickFixEngineering)
         $InstalledSoftware      = Software\Get-InstalledSoftware
