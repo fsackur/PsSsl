@@ -55,7 +55,7 @@ function Get-Tls12Readiness
 
         $OutputProperties = (
             'SupportsTls12',
-            'RequiredUpdates',
+            'RequiredActions',
             'OS',
             'WikiLink',
             'ClientTls12Enabled',
@@ -77,7 +77,7 @@ function Get-Tls12Readiness
         $InstalledSoftware      = Software\Get-InstalledSoftware
         $InstalledSqlFeatures   = $InstalledSoftware | Where-Object {$_.DisplayName -match 'SQL'}
 
-        $RequiredUpdates        = @()
+        $RequiredActions        = @()
         $Output.OS              = $WmiOS.Caption
         $Output.WikiLink        = 'https://rax.io/Win-Disabling-TLS'
 
@@ -87,7 +87,7 @@ function Get-Tls12Readiness
         if ([version]$WmiOS.Version -lt [version]"6.1" -and -not $KB4019276)
         {
             $OSSupportsTls12 = $false
-            $RequiredUpdates += "Install KB4019276 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB4019276"
+            $RequiredActions += "Install KB4019276 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB4019276"
         }
         else
         {
@@ -109,11 +109,11 @@ function Get-Tls12Readiness
             # Perform cumulative '-and'; will be false if even one subproperty is false
             $FeaturesSupportTls12 = $FeaturesSupportTls12 -and $Output.$Property.SupportsTls12
 
-            $RequiredUpdates += $Output.$Property.RequiredUpdates
+            $RequiredActions += $Output.$Property.RequiredActions
         }
 
         $Output.SupportsTls12   = $OsSupportsTls12 -and $FeaturesSupportTls12 -and $Output.ClientTls12Enabled
-        $Output.RequiredUpdates = $RequiredUpdates | Where-Object {$_}  # Filter out nulls
+        $Output.RequiredActions = $RequiredActions | Where-Object {$_}  # Filter out nulls
 
 
         Write-Output $Output

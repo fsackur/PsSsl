@@ -7,8 +7,8 @@ function New-ReadinessSpecObject
         .DESCRIPTION
         Creates an object for components to report their TLS 1.2 readiness.
 
-        Created objects always have a 'SupportsTls12' property and a 'RequiredUpdates' property. 'SupportsTls12'
-        will be initialised as false. 'RequiredUpdates' will be initialised as an empty array.
+        Created objects always have a 'SupportsTls12' property and a 'RequiredActions' property. 'SupportsTls12'
+        will be initialised as false. 'RequiredActions' will be initialised as an empty array.
 
         .PARAMETER Property
         Specifies to add extra properties to the created object.
@@ -19,22 +19,22 @@ function New-ReadinessSpecObject
         .EXAMPLE
         New-ReadinessSpecObject
 
-        SupportsTls12 RequiredUpdates
+        SupportsTls12 RequiredActions
         ------------- ---------------
                 False {}
 
-        Creates an object with 'SupportsTls12' and 'RequiredUpdates' properties. 'SupportsTls12' is initialised
-        as false; 'RequiredUpdates' is initialised as an empty array.
+        Creates an object with 'SupportsTls12' and 'RequiredActions' properties. 'SupportsTls12' is initialised
+        as false; 'RequiredActions' is initialised as an empty array.
 
         .EXAMPLE
         New-ReadinessSpecObject -Property 'SqlFeatures'
 
-        SupportsTls12 RequiredUpdates SqlFeatures
+        SupportsTls12 RequiredActions SqlFeatures
         ------------- --------------- -----------
                 False {}
 
-        Creates an object with 'SupportsTls12', 'RequiredUpdates' and 'SqlFeatures' properties. 'SupportsTls12'
-        is initialised as false; 'RequiredUpdates' is initialised as an empty array; 'SqlFeatures' is initialised
+        Creates an object with 'SupportsTls12', 'RequiredActions' and 'SqlFeatures' properties. 'SupportsTls12'
+        is initialised as false; 'RequiredActions' is initialised as an empty array; 'SqlFeatures' is initialised
         as null.
     #>
     [CmdletBinding()]
@@ -45,7 +45,7 @@ function New-ReadinessSpecObject
         [string[]]$Property
     )
 
-    $Properties = 'SupportsTls12', 'RequiredUpdates'
+    $Properties = 'SupportsTls12', 'RequiredActions'
     if ($Property)
     {
         $Properties = $Properties + $Property | Select-Object -Unique
@@ -57,16 +57,16 @@ function New-ReadinessSpecObject
         Add-Member -InputObject $Output -MemberType 'NoteProperty' -Name $P -Value $null
     }
     $Output.SupportsTls12   = $false
-    $Output.RequiredUpdates = @()
+    $Output.RequiredActions = @()
 
     Add-Member -InputObject $Output -MemberType 'ScriptMethod' -Name 'ToString' -Force -Value {
         if ($this.SupportsTls12)
         {
             "Ready"
         }
-        elseif ($this.RequiredUpdates)
+        elseif ($this.RequiredActions)
         {
-            "Required updates: $($this.RequiredUpdates.Count)"
+            "Required updates: $($this.RequiredActions.Count)"
         }
         else
         {

@@ -37,7 +37,7 @@
 
         if (-not $Output.SupportsTls12)
         {
-            $Report.RequiredUpdates += "Request MBU team to push Commvault 10 SP14 or above"
+            $Report.RequiredActions += "Request MBU team to push Commvault 10 SP14 or above"
         }
 
         return $Output

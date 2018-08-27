@@ -63,8 +63,8 @@
                 }
                 else
                 {
-                    $Output.SupportsTls12 = $false
-                    $Output.UpdatesRequired += "Install KB3080079 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB3080079"
+                    $Output.SupportsTls12    = $false
+                    $Output.RequiredActions += "Install KB3080079 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB3080079"
                 }
                 break
             }
@@ -78,8 +78,8 @@
                 }
                 else
                 {
-                    $Output.SupportsTls12 = $false
-                    $Output.RequiredUpdates += (
+                    $Output.SupportsTls12    = $false
+                    $Output.RequiredActions += (
                         "Set RDP security layer to 'Rdp'",
                         "Warn customer that RDP security will be reduced"
                     )

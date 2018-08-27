@@ -43,7 +43,7 @@
 
         if ($Output.InstalledOdbcDriver.Version -lt [version]"12.0.4219")
         {
-            $Output.RequiredUpdates += 'Update SQL ODBC driver from https://www.microsoft.com/en-us/download/details.aspx?id=36434'
+            $Output.RequiredActions += 'Update SQL ODBC driver from https://www.microsoft.com/en-us/download/details.aspx?id=36434'
         }
         else
         {

@@ -73,13 +73,13 @@
 
             # Get the SQL version from the service binary
             $Instance.Version = [version](Get-Item $Path).VersionInfo.ProductVersion
-            $RequiredUpdates  = Get-Tls12DbEngineRequiredUpdates -Version $Instance.Version
+            $RequiredActions  = Get-Tls12DbEngineRequiredActions -Version $Instance.Version
 
 
-            if ($RequiredUpdates)
+            if ($RequiredActions)
             {
                 $Instance.SupportsTls12    = $false
-                $Instance.RequiredUpdates += $RequiredUpdates
+                $Instance.RequiredActions += $RequiredActions
             }
             else
             {
@@ -91,7 +91,7 @@
 
 
         $Output.SupportsTls12   = $null -eq ($Output.Instances | Where-Object {-not $_.SupportsTls12})
-        $Output.RequiredUpdates = $Output.Instances | Select-Object -ExpandProperty RequiredUpdates -Unique
+        $Output.RequiredActions = $Output.Instances | Select-Object -ExpandProperty RequiredActions -Unique
 
         Write-Output $Output
     }

@@ -1,4 +1,4 @@
-function Get-Tls12DbEngineRequiredUpdates
+function Get-Tls12DbEngineRequiredActions
 {
     <#
         .SYNOPSIS
@@ -18,7 +18,7 @@ function Get-Tls12DbEngineRequiredUpdates
         [string[]]
 
         .EXAMPLE
-        Get-Tls12DbEngineRequiredUpdates 10.50.0.4000
+        Get-Tls12DbEngineRequiredActions 10.50.0.4000
 
         Apply SP3 from http://www.microsoft.com/en-us/download/details.aspx?id=44271
         Apply TLS hotfix from https://support.microsoft.com/en-us/hotfix/kbhotfix?kbnum=3144113&kbln=en-us

@@ -82,7 +82,7 @@
                         }
                         else
                         {
-                            $Output.RequiredUpdates += 'Apply KB3099842 from https://support.microsoft.com/en-us/help/3099842'
+                            $Output.RequiredActions += 'Apply KB3099842 from https://support.microsoft.com/en-us/help/3099842'
                         }
                         break
                     }
@@ -96,7 +96,7 @@
                         }
                         else
                         {
-                            $Output.RequiredUpdates += 'Apply KB3099844 from https://support.microsoft.com/en-us/help/3099844'
+                            $Output.RequiredActions += 'Apply KB3099844 from https://support.microsoft.com/en-us/help/3099844'
                         }
                         break
                     }
@@ -119,15 +119,15 @@
                                 }
                                 else
                                 {
-                                    $Output.RequiredUpdates += 'Apply KB3099845 from https://support.microsoft.com/en-us/help/3099845'
+                                    $Output.RequiredActions += 'Apply KB3099845 from https://support.microsoft.com/en-us/help/3099845'
                                 }
                                 break
                             }
 
                             {$_ -ge [version]"4.5"}
                             {
-                                $Output.RequiredUpdates += 'Install .NET 4.5.1 or higher from https://www.microsoft.com/en-gb/download/details.aspx?id=40779'
-                                $Output.RequiredUpdates += 'Rerun TLS 1.2 readiness checks'
+                                $Output.RequiredActions += 'Install .NET 4.5.1 or higher from https://www.microsoft.com/en-gb/download/details.aspx?id=40779'
+                                $Output.RequiredActions += 'Rerun TLS 1.2 readiness checks'
                                 break
                             }
                         }
@@ -139,15 +139,15 @@
 
             {$_ -ge [version]"4.0"}
             {
-                $Output.RequiredUpdates += 'Install KB3106994 from https://support.microsoft.com/en-us/help/3106994'
+                $Output.RequiredActions += 'Install KB3106994 from https://support.microsoft.com/en-us/help/3106994'
                 break
             }
 
             {$_ -lt [version]"4.0"}
             {
-                $Output.RequiredUpdates += 'Assessment of .NET framework below 4 must be done manually'
-                $Output.RequiredUpdates += 'Refer to https://support.microsoft.com/en-us/help/3135244/tls-1-2-support-for-microsoft-sql-server'
-                $Output.RequiredUpdates += 'Suggest customer migrate to more recent version of the .NET framework'
+                $Output.RequiredActions += 'Assessment of .NET framework below 4 must be done manually'
+                $Output.RequiredActions += 'Refer to https://support.microsoft.com/en-us/help/3135244/tls-1-2-support-for-microsoft-sql-server'
+                $Output.RequiredActions += 'Suggest customer migrate to more recent version of the .NET framework'
                 break
             }
         }
