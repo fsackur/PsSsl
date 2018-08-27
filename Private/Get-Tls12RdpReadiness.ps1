@@ -27,7 +27,7 @@
     process
     {
         $OperatingSystem = Get-WmiOS
-        $Hotfixes        = Get-WmiHotfix
+        $Hotfixes        = Get-WmiHotfixes
         $Output          = New-ReadinessSpecObject
         $Version         = [version]$OperatingSystem.Version
 
