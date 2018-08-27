@@ -19,9 +19,9 @@ function Get-TlsProtocol
         .EXAMPLE
         Get-TlsProtocol 'TLS 1.2 Client'
 
-        Protocol       IsEnabled OsDefaultIsEnabled
-        --------       --------- ------------------
-        TLS 1.2 Client      True               True
+        Protocol       Enabled OsDefaultIsEnabled
+        --------       ------- ------------------
+        TLS 1.2 Client    True               True
 
         Gets the TLS 1.2 Client protocol.
     #>
@@ -54,7 +54,7 @@ function Get-TlsProtocol
 
     begin
     {
-        $OutputProperties = 'Protocol', 'IsEnabled', 'OsDefaultIsEnabled'
+        $OutputProperties = 'Protocol', 'Enabled', 'OsDefaultIsEnabled'
 
         $DefaultsForOS    = Get-TlsProtocolDefaults -OSVersion $OSVersion
         $SchannelKey      = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL"
@@ -81,11 +81,11 @@ function Get-TlsProtocol
 
         if ($null -eq $RegKeyObj)
         {
-            $Output.IsEnabled = $OsDefaultIsEnabled
+            $Output.Enabled = $OsDefaultIsEnabled
         }
         else
         {
-            $Output.IsEnabled = (
+            $Output.Enabled = (
                 $RegKeyObj.DisabledByDefault -eq 0 -and
                 ($RegKeyObj.Enabled -band 1) -eq 1      # Check the right-most bit, instead of simple numeric equality, due to community confusion around 0xffffffff versus 1
             )
