@@ -9,30 +9,15 @@
 
         If updates are required, they will be reported in the output.
 
-        .PARAMETER InstalledDotNetVersion
-        To avoid a duplicate function call, provide one or more installed .NET versions.
-
-        .PARAMETER Hotfixes
-        To avoid a duplicate WMI query, provide all instances of the WMI class Win32_QuickFixEngineering.
-
         .OUTPUTS
         [psobject]
 
         .EXAMPLE
         Get-Tls12AdoDotNetReadiness
-
     #>
     [CmdletBinding()]
     [OutputType([psobject])]
-    param
-    (
-        [Parameter(Position = 0)]
-        [psobject[]]$InstalledDotNetVersion = (Get-DotNetVersion),
-
-        [Parameter(Position = 1)]
-        [ValidateScript( {$_.__CLASS -eq 'Win32_QuickFixEngineering'})]
-        [System.Management.ManagementObject[]]$Hotfixes = (Get-WmiObject Win32_QuickFixEngineering)
-    )
+    param ()
 
     begin
     {
@@ -41,12 +26,12 @@
 
     process
     {
-        $Output = New-ReadinessSpecObject -Property 'DotNetVersion'
+        $OperatingSystem = Get-WmiOS
+        $Hotfixes        = Get-WmiHotfixes
+        $Output          = New-ReadinessSpecObject -Property 'DotNetVersion'
 
-        $OSVersion = [version]$OperatingSystem.Version
-        $DotNetVersion = $InstalledDotNetVersion |
-            Select-Object -First 1
-
+        $OSVersion       = [version]$OperatingSystem.Version
+        $DotNetVersion   = Software\Get-DotNetVersion | Sort-Object | Select-Object -Last 1
 
         if ($DotNetVersion)
         {

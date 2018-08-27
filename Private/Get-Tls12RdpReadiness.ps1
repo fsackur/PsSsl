@@ -9,12 +9,6 @@
 
         If updates are required, they will be reported in the output.
 
-        .PARAMETER OperatingSystem
-        To avoid a duplicate WMI query, provide an instance of the WMI class Win32_OperatingSystem.
-
-        .PARAMETER Hotfixes
-        To avoid a duplicate WMI query, provide all instances of the WMI class Win32_QuickFixEngineering.
-
         .OUTPUTS
         [psobject]
 
@@ -23,16 +17,7 @@
     #>
     [CmdletBinding()]
     [OutputType([psobject])]
-    param
-    (
-        [Parameter(Position = 0)]
-        [ValidateScript({$_.__CLASS -eq 'Win32_OperatingSystem'})]
-        [System.Management.ManagementObject]$OperatingSystem = (Get-WmiObject Win32_OperatingSystem),
-
-        [Parameter(Position = 1)]
-        [ValidateScript( {$_.__CLASS -eq 'Win32_QuickFixEngineering'})]
-        [System.Management.ManagementObject[]]$Hotfixes = (Get-WmiObject Win32_QuickFixEngineering)
-    )
+    param ()
 
     begin
     {
@@ -41,9 +26,11 @@
 
     process
     {
-        $Output = New-ReadinessSpecObject
+        $OperatingSystem = Get-WmiOS
+        $Hotfixes        = Get-WmiHotfix
+        $Output          = New-ReadinessSpecObject
+        $Version         = [version]$OperatingSystem.Version
 
-        $Version = [version]$OperatingSystem.version
         switch ($Version)
         {
             # 2012 RTM and above

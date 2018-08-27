@@ -9,15 +9,11 @@
 
         If updates are required, they will be reported in the output.
 
-        .PARAMETER InstalledSqlFeatures
-        To avoid a duplicate function call, provide all instances of installed SQL features.
-
         .OUTPUTS
         [psobject]
 
         .EXAMPLE
         Get-Tls12OdbcReadiness
-
     #>
     [CmdletBinding()]
     [OutputType([psobject])]
@@ -34,6 +30,7 @@
 
     process
     {
+        $InstalledSqlFeatures = Get-InstalledSqlFeatures
         $Output = New-ReadinessSpecObject -Property InstalledOdbcDriver
 
         $Output.InstalledOdbcDriver = $InstalledSqlFeatures |

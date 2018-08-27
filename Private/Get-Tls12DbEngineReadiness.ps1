@@ -9,9 +9,6 @@
 
         If updates are required, they will be reported in the output.
 
-        .PARAMETER InstalledSqlFeatures
-        To avoid a duplicate function call, provide all instances of installed SQL features.
-
         .OUTPUTS
         [psobject]
 
@@ -21,11 +18,7 @@
     #>
     [CmdletBinding()]
     [OutputType([psobject])]
-    param
-    (
-        [Parameter(Position = 0)]
-        [psobject[]]$InstalledSqlFeatures = (Software\Get-InstalledSoftware | Where-Object {$_.DisplayName -match 'SQL'})
-    )
+    param ()
 
     begin
     {
@@ -34,6 +27,7 @@
 
     process
     {
+        $InstalledSqlFeatures = Get-InstalledSqlFeatures
         $Output = New-ReadinessSpecObject -Property InstalledDbEngineFeatures, Instances
 
         $Output.InstalledDbEngineFeatures = $InstalledSqlFeatures |
