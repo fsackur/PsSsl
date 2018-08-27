@@ -66,19 +66,9 @@
             }
 
             # Get the SQL version from the service binary
-            $Instance.Version = [version](Get-Item $Path).VersionInfo.ProductVersion
-            $RequiredActions  = Get-Tls12DbEngineRequiredActions -SqlVersion $Instance.Version
-
-
-            if ($RequiredActions)
-            {
-                $Instance.SupportsTls12    = $false
-                $Instance.RequiredActions += $RequiredActions
-            }
-            else
-            {
-                $Instance.SupportsTls12 = $true
-            }
+            $Instance.Version         = [version](Get-Item $Path).VersionInfo.ProductVersion
+            $Instance.RequiredActions = Get-Tls12DbEngineRequiredActions -SqlVersion $Instance.Version
+            $Instance.SupportsTls12   = $Instance.RequiredActions.Count -eq 0
 
             $Output.Instances += $Instance
         }

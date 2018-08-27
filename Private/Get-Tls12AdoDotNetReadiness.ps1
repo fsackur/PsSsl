@@ -49,8 +49,7 @@
         {
             {$_ -ge [version]"4.6"}
             {
-                $Output.SupportsTls12 = $true
-                break
+                break   # Supports TLS 1.2
             }
 
             {$_ -ge [version]"4.5"}
@@ -61,11 +60,7 @@
                     3       # 2012 R2
                     {
                         $KB3099842 = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB3099842'}
-                        if ($KB3099842)
-                        {
-                            $Output.SupportsTls12 = $true
-                        }
-                        else
+                        if (-not $KB3099842)
                         {
                             $Output.RequiredActions += 'Apply KB3099842 from https://support.microsoft.com/en-us/help/3099842'
                         }
@@ -75,11 +70,7 @@
                     2       # 2012 RTM
                     {
                         $KB3099844 = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB3099844'}
-                        if ($KB3099844)
-                        {
-                            $Output.SupportsTls12 = $true
-                        }
-                        else
+                        if (-not $KB3099844)
                         {
                             $Output.RequiredActions += 'Apply KB3099844 from https://support.microsoft.com/en-us/help/3099844'
                         }
@@ -92,17 +83,12 @@
                         {
                             {$_ -ge [version]"4.5.3"}
                             {
-                                $Output.SupportsTls12 = $true
-                                break
+                                break   # Supports TLS 1.2
                             }
 
                             {$_ -ge [version]"4.5.1"}
                             {
-                                if ($Hotfixes | Where-Object {$_.HotfixID -eq 'KB3099845'})
-                                {
-                                    $Output.SupportsTls12 = $true
-                                }
-                                else
+                                if ($null -eq ($Hotfixes | Where-Object {$_.HotfixID -eq 'KB3099845'}))
                                 {
                                     $Output.RequiredActions += 'Apply KB3099845 from https://support.microsoft.com/en-us/help/3099845'
                                 }
@@ -137,7 +123,7 @@
             }
         }
 
-
+        $Output.SupportsTls12 = $Output.RequiredActions.Count -eq 0
         Write-Output $Output
     }
 

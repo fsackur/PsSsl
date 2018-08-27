@@ -68,8 +68,7 @@
         }
 
 
-        $Output.SupportsTls12 = -not $Output.RequiredActions
-
+        $Output.SupportsTls12 = $Output.RequiredActions.Count -eq 0
         return $Output
     }
 
