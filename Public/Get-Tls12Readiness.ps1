@@ -81,58 +81,33 @@ function Get-Tls12Readiness
 
     process
     {
-        $Output                 = New-ReadinessSpecObject -Property $OutputProperties
+        $Output                     = Get-Tls12OSReadiness
+        $NestedProperties           = $OutputProperties -match 'Readiness$'
 
-        # We pass these to each function
-        $WmiOS                  = Get-WmiObject Win32_OperatingSystem
-        $Hotfixes               = (Get-WmiObject Win32_QuickFixEngineering)
-        $InstalledSoftware      = Software\Get-InstalledSoftware
-        $InstalledSqlFeatures   = $InstalledSoftware | Where-Object {$_.DisplayName -match 'SQL'}
-
-        $RequiredActions        = @()
-        $Output.OS              = $WmiOS.Caption
-        $Output.WikiLink        = 'https://rax.io/Win-Disabling-TLS'
-
-
-        $KB4019276              = $Hotfixes | Where-Object {$_.HotfixID -eq 'KB4019276'}
-
-        if ([version]$WmiOS.Version -lt [version]"6.1" -and -not $KB4019276)
+        foreach ($Property in $NestedProperties)
         {
-            $OSSupportsTls12 = $false
-            $RequiredActions += "Install KB4019276 from https://www.catalog.update.microsoft.com/Search.aspx?q=KB4019276"
-        }
-        else
-        {
-            $OSSupportsTls12 = $true   # so far. Can still be set to false.
+            Add-Member -InputObject $Output 'NoteProperty' -Name $Property -Value $null
         }
 
-
-        $Output.ClientTls12Enabled  = (Get-TlsProtocol 'TLS 1.2 Client').Enabled
-        if (-not $Output.ClientTls12Enabled)
-        {
-            $RequiredActions += 'Enable client-side TLS 1.2 protocol'
-        }
-
-        $Output.RdpReadiness        = Get-Tls12RdpReadiness -OperatingSystem $WmiOS -Hotfixes $Hotfixes
-        $Output.AdoDotNetReadiness  = Get-Tls12AdoDotNetReadiness -Hotfixes $Hotfixes
-        $Output.DbEngineReadiness   = Get-Tls12DbEngineReadiness -InstalledSqlFeatures $InstalledSqlFeatures
+        # The nested properties
+        $Output.RdpReadiness        = Get-Tls12RdpReadiness
+        $Output.AdoDotNetReadiness  = Get-Tls12AdoDotNetReadiness
+        $Output.DbEngineReadiness   = Get-Tls12DbEngineReadiness
         $Output.MbuReadiness        = Get-Tls12MbuReadiness
-        $Output.OdbcReadiness       = Get-Tls12OdbcReadiness -InstalledSqlFeatures $InstalledSqlFeatures
-        $Output.SnacReadiness       = Get-Tls12SnacReadiness -InstalledSqlFeatures $InstalledSqlFeatures
+        $Output.OdbcReadiness       = Get-Tls12OdbcReadiness
+        $Output.SnacReadiness       = Get-Tls12SnacReadiness
 
 
-        $FeaturesSupportTls12 = $true
-        foreach ($Property in ($OutputProperties -match 'Readiness$'))
+        foreach ($Property in $NestedProperties)
         {
-            # Perform cumulative '-and'; will be false if even one subproperty is false
-            $FeaturesSupportTls12 = $FeaturesSupportTls12 -and $Output.$Property.SupportsTls12
+            # Perform cumulative '-and'; will end up false if even one subproperty is false
+            $Output.SupportsTls12 = $Output.SupportsTls12 -and $Output.$Property.SupportsTls12
 
-            $RequiredActions += $Output.$Property.RequiredActions
+            if ($Output.$Property.RequiredActions)
+            {
+                $Output.RequiredActions += $Output.$Property.RequiredActions
+            }
         }
-
-        $Output.SupportsTls12   = $OsSupportsTls12 -and $FeaturesSupportTls12 -and $Output.ClientTls12Enabled
-        $Output.RequiredActions = $RequiredActions | Where-Object {$_}  # Filter out nulls
-
 
         Write-Output $Output
     }
