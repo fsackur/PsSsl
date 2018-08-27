@@ -41,7 +41,7 @@
 
     process
     {
-        $Output            = New-ReadinessSpecObject -Property $OutputProperties
+        $Output            = New-ReadinessSpecObject -AddMember $OutputProperties
         $WmiOS             = Get-WmiOS
         $Output.OS         = $WmiOS.Caption
         $Output.WikiLink   = 'https://rax.io/Win-Disabling-TLS'

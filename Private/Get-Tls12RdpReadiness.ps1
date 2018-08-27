@@ -28,7 +28,7 @@
     {
         $OperatingSystem = Get-WmiOS
         $Hotfixes        = Get-WmiHotfixes
-        $Output          = New-ReadinessSpecObject -Property RdpSecurityLayer
+        $Output          = New-ReadinessSpecObject -AddMember RdpSecurityLayer
         $Version         = [version]$OperatingSystem.Version
         $Output.RdpSecurityLayer = Get-RdpSecurityLayer
 

@@ -28,7 +28,7 @@
     {
         $OperatingSystem = Get-WmiOS
         $Hotfixes        = Get-WmiHotfixes
-        $Output          = New-ReadinessSpecObject -Property 'DotNetVersion'
+        $Output          = New-ReadinessSpecObject -AddMember 'DotNetVersion'
 
         $OSVersion       = [version]$OperatingSystem.Version
         $DotNetVersion   = Software\Get-DotNetVersion | Sort-Object | Select-Object -Last 1

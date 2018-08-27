@@ -15,7 +15,7 @@ function Get-InstalledSqlFeatures
         [psobject[]]
 
         .EXAMPLE
-        New-ReadinessSpecObject -Property 'SqlFeatures'
+        New-ReadinessSpecObject -AddMember 'SqlFeatures'
 
         SupportsTls12 RequiredActions SqlFeatures
         ------------- --------------- -----------

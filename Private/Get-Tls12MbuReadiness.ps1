@@ -27,7 +27,7 @@
 
     process
     {
-        $Output = New-ReadinessSpecObject -Property 'CommvaultVersion'
+        $Output = New-ReadinessSpecObject -AddMember 'CommvaultVersion'
         $Output.CommvaultVersion = $CommvaultVersion = Get-CommvaultVersion
 
         $Output.SupportsTls12 = (

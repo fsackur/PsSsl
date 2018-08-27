@@ -10,7 +10,7 @@ function New-ReadinessSpecObject
         Created objects always have a 'SupportsTls12' property and a 'RequiredActions' property. 'SupportsTls12'
         will be initialised as false. 'RequiredActions' will be initialised as an empty array.
 
-        .PARAMETER Property
+        .PARAMETER AddMember
         Specifies to add extra properties to the created object.
 
         .OUTPUTS
@@ -27,7 +27,7 @@ function New-ReadinessSpecObject
         as false; 'RequiredActions' is initialised as an empty array.
 
         .EXAMPLE
-        New-ReadinessSpecObject -Property 'SqlFeatures'
+        New-ReadinessSpecObject -AddMember 'SqlFeatures'
 
         SupportsTls12 RequiredActions SqlFeatures
         ------------- --------------- -----------
@@ -42,13 +42,13 @@ function New-ReadinessSpecObject
     param
     (
         [Parameter()]
-        [string[]]$Property
+        [string[]]$AddMember
     )
 
     $Properties = 'SupportsTls12', 'RequiredActions'
-    if ($Property)
+    if ($AddMember)
     {
-        $Properties = $Properties + $Property | Select-Object -Unique
+        $Properties = $Properties + $AddMember | Select-Object -Unique
     }
 
     $Output = New-Object PSObject
