@@ -24,6 +24,9 @@ function Get-TlsProtocol
         TLS 1.2 Client    True               True
 
         Gets the TLS 1.2 Client protocol.
+
+        .LINK
+        https://docs.microsoft.com/en-us/windows-server/security/tls/tls-registry-settings
     #>
     [CmdletBinding()]
     [OutputType([psobject])]
