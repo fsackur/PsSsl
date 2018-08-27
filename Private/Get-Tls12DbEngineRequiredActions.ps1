@@ -11,7 +11,7 @@ function Get-Tls12DbEngineRequiredActions
 
         Strings are human readable, and tell you what to install and what URL to download it from
 
-        .PARAMETER Version
+        .PARAMETER SqlVersion
         SQL version to check
 
         .OUTPUTS
@@ -33,17 +33,17 @@ function Get-Tls12DbEngineRequiredActions
     param
     (
         [Parameter(Mandatory=$true, Position=0)]
-        [version]$Version
+        [version]$SqlVersion
     )
 
     $KBs = @()
 
-    switch ($Version)
+    switch ($SqlVersion)
     {
         #2008 RTM
         {$_.Major -eq 10 -and $_.Minor -lt 50}
         {
-            switch ($Version.Build)
+            switch ($SqlVersion.Build)
             {
                 {$_ -lt 6547}   {$KBs += 'Apply intermittent service termination hotfix from https://support.microsoft.com/en-us/kb/3146034'} #Intermittent service terminations
                 {$_ -lt 6543}   {$KBs += 'Apply TLS hotfix from https://support.microsoft.com/en-us/hotfix/kbhotfix?kbnum=3144113&kbln=en-us'} #TLS Update https://support.microsoft.com/en-gb/help/3135244/tls-1.2-support-for-microsoft-sql-server
@@ -55,7 +55,7 @@ function Get-Tls12DbEngineRequiredActions
         #2008 R2
         {$_.Major -eq 10 -and $_.Minor -ge 50}
         {
-            switch ($Version.Build)
+            switch ($SqlVersion.Build)
             {
                 {$_ -lt 6542}   {$KBs += 'Apply intermittent service termination hotfix from https://support.microsoft.com/en-us/kb/3146034'}
                 {$_ -lt 6537}   {$KBs += 'Apply TLS hotfix from https://support.microsoft.com/en-us/hotfix/kbhotfix?kbnum=3144114&kbln=en-us'}
@@ -68,10 +68,10 @@ function Get-Tls12DbEngineRequiredActions
         {$_.Major -eq 11}
         {
             #If we're below SP3 but on or above SP2 CU10, then no change
-            if ($Version.Build -lt 6020 -and $Version.Build -ge 5644) {break}
+            if ($SqlVersion.Build -lt 6020 -and $SqlVersion.Build -ge 5644) {break}
 
             #Below 6518, apply SP3 & at least CU1
-            switch ($Version.Build)
+            switch ($SqlVersion.Build)
             {
                 {$_ -lt 6518}   {$KBs += 'Apply CU1 (or later) from https://support.microsoft.com/en-us/kb/3123299'}
                 {$_ -lt 6020}   {$KBs += 'Apply SP3 from https://www.microsoft.com/en-us/download/details.aspx?id=49996'}
@@ -83,13 +83,13 @@ function Get-Tls12DbEngineRequiredActions
         {$_.Major -eq 12}
         {
             #If we're above SP2, then no change
-            if ($Version.Build -ge 5000) {break}
+            if ($SqlVersion.Build -ge 5000) {break}
 
             #If we're below SP2 but on or above SP1 CU5, then no change
-            if ($Version.Build -lt 5000 -and $Version.Build -ge 4439) {break}
+            if ($SqlVersion.Build -lt 5000 -and $SqlVersion.Build -ge 4439) {break}
 
             #If we're below SP1 but on or above RTM CU12, then no change
-            if ($Version.Build -lt 4050 -and $Version.Build -ge 2564) {break}
+            if ($SqlVersion.Build -lt 4050 -and $SqlVersion.Build -ge 2564) {break}
 
             #Otherwise, recommend SP2
             $KBs += 'Apply SP2 from https://www.microsoft.com/en-us/download/details.aspx?id=53168'
@@ -106,7 +106,9 @@ function Get-Tls12DbEngineRequiredActions
 
         Default
         {
-            $KBs += "Version $Version not known by the SQL TLS compatibility calculator."
+            $Message = "SQL version '$SqlVersion' not known by the SQL TLS compatibility calculator."
+            $KBs     += $Message
+            Write-Error $Message
         }
     }
 

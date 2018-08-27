@@ -67,7 +67,7 @@
 
             # Get the SQL version from the service binary
             $Instance.Version = [version](Get-Item $Path).VersionInfo.ProductVersion
-            $RequiredActions  = Get-Tls12DbEngineRequiredActions -Version $Instance.Version
+            $RequiredActions  = Get-Tls12DbEngineRequiredActions -SqlVersion $Instance.Version
 
 
             if ($RequiredActions)
