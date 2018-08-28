@@ -46,7 +46,7 @@
         $OpenSslPath = Join-Path $OpenSslPath 'openssl.exe'
     }
 
-    $env:OPENSSL_CONF = $OpenSslConfigPath
+    #$env:OPENSSL_CONF = $OpenSslConfigPath
 
 
     $OutputChars = New-Object System.Collections.Generic.List[char]
@@ -98,17 +98,17 @@
 
     $ErrorPS.EndInvoke($ErrorAsyncResult)
 
-    if ($ErrorChars)
+    $Output = $OutputChars -join ''
+    $ErrorMsg = $ErrorChars -join ''
+    $ErrorMsg = $ErrorMsg -replace "WARNING: can't open config file: /usr/local/ssl/openssl.cnf\s*"
+    if ($ErrorMsg)
     {
-        Write-Error ($ErrorChars -join '')
+        Write-Error $ErrorMsg
     }
-    if ($OutputChars)
+    if ($Output)
     {
-        Write-Output ($OutputChars -join '')
+        Write-Output $Output
     }
 
     $Process.Dispose()
 }
-
-Invoke-OpenSsl -ArgumentList "ciphers", 'ALL:eNULL'
-#Invoke-OpenSsl -ArgumentList "s_client -connect localhost:5986", '-tls1_2'
