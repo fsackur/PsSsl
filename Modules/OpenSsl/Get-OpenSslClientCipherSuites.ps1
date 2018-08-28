@@ -4,10 +4,10 @@
     param (
         [Parameter(Position = 0)]
         [ValidateSet(
-            'SSL 2.0'
-            'SSL 3.0'
-            'TLS 1.0'
-            'TLS 1.1'
+            'SSL 2.0',
+            'SSL 3.0',
+            'TLS 1.0',
+            'TLS 1.1',
             'TLS 1.2'
         )]
         [string]$Protocol
